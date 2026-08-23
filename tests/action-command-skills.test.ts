@@ -206,6 +206,18 @@ describe("repo-harness action command skills", () => {
     expect(migrate).toContain("ownership=known_generated");
     expect(upgrade).toContain("known_generated");
     expect(upgrade).toContain("Preserve `_ref/`, `_ops/`, secrets, local env, custom hooks");
+    for (const marker of [
+      "fork-managed host",
+      "deploy/runbooks/fork-upstream-update.md",
+      "update/upstream-",
+      "integration PR",
+      "same conversation",
+      "bun run check:ci",
+      "operator approval",
+    ]) {
+      expect(upgrade).toContain(marker);
+    }
+    expect(upgrade).toContain("Do not run the npm-channel `repo-harness update`");
   });
 
   test("setup's capability mode is a targeted registry update instead of full init", () => {
