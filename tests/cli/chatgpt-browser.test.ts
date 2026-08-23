@@ -1472,7 +1472,9 @@ describe('chatgpt browser command', () => {
     const consult = readFileSync(join(ROOT, 'assets/skills/repo-harness-chatgpt/references/consult.md'), 'utf-8');
     expect(consult).toContain('date -u +%Y%m%dT%H%M%SZ');
     expect(consult).toContain('.ai/harness/handoff/gptpro/gptpro-${stamp}-<slug>.md');
-    expect(consult).toContain('--model gpt-5.5-pro');
+    expect(consult).toContain('--model gpt-5.6-sol');
+    expect(consult).toContain('--thinking extended');
+    expect(consult).not.toContain('--model gpt-5.5-pro');
     expect(consult).toContain('commonly take 15');
     expect(consult).toContain('minutes or more');
     expect(consult).toContain('Do not treat elapsed time as failure');

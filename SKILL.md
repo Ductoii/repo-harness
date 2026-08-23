@@ -16,6 +16,11 @@ repo-harness state resolve --json
 
 Treat that JSON as the state authority; read Plan, Contract, checks, handoff, or architecture files only when it points to them.
 
+**GPT-first** — when `repo-harness-chatgpt` is installed and browser readiness
+passes, route every non-trivial feature, bugfix, architecture, optimization,
+planning, and review task through its orchestrate mode by default. A `gptweb` keyword is not required. Skip only for explicit local-only or purely mechanical
+work; setup/readiness failure stops closed.
+
 ## Actions
 
 1. **setup** — install, init, migrate, repair, or scaffold the harness. Use `repo-harness-setup`; inspect first with `repo-harness init --repo . --dry-run`, or run `repo-harness docs show harness-overview` when detail is needed.
