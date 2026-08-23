@@ -132,7 +132,7 @@ See captured planning output.
 - Consumes: canonical Markdown packages under `SKILL.md` and `assets/skills/repo-harness-chatgpt/`.
 - Produces: regression assertions for configured-host default routing and Sol/High command flags.
 
-- [ ] **Step 1: Replace explicit-per-task expectations with configured-host default expectations**
+- [x] **Step 1: Replace explicit-per-task expectations with configured-host default expectations**
 
 Assert these exact semantic markers:
 
@@ -143,7 +143,7 @@ expect(semanticOrchestrate).toContain("local-only");
 expect(semanticSetup).toContain("One-Time Host Enablement");
 ```
 
-- [ ] **Step 2: Pin the canonical consult example**
+- [x] **Step 2: Pin the canonical consult example**
 
 ```ts
 expect(consult).toContain("--model gpt-5.6-sol");
@@ -151,11 +151,11 @@ expect(consult).toContain("--thinking extended");
 expect(consult).not.toContain("--model gpt-5.5-pro");
 ```
 
-- [ ] **Step 3: Add a routing-eval case**
+- [x] **Step 3: Add a routing-eval case**
 
 Add one non-trivial active repo-harness feature prompt whose expected selected routes include both `repo-harness` and `repo-harness-chatgpt`, while ordinary Q&A still expects no harness route.
 
-- [ ] **Step 4: Run the focused tests and verify red**
+- [x] **Step 4: Run the focused tests and verify red**
 
 Run:
 
@@ -165,7 +165,7 @@ bun test tests/skill-surface/chatgpt-package.test.ts tests/action-command-skills
 
 Expected: failure on the old explicit-opt-in and `gpt-5.5-pro` content.
 
-- [ ] **Step 5: Commit the red tests**
+- [x] **Step 5: Commit the red tests**
 
 ```bash
 git add tests/skill-surface/chatgpt-package.test.ts tests/action-command-skills.test.ts tests/skill-routing-eval.test.ts
@@ -187,7 +187,7 @@ git commit -m "test: require global GPT-first routing"
 - Consumes: explicit one-time ChatGPT host skill projection and Oracle readiness checks.
 - Produces: a default-on advisory route plus exact Sol/High invocation contract.
 
-- [ ] **Step 1: Route non-trivial active work from the root skill**
+- [x] **Step 1: Route non-trivial active work from the root skill**
 
 Add a concise action before setup/plan/execute:
 
@@ -195,15 +195,15 @@ Add a concise action before setup/plan/execute:
 **GPT-first** — when the canonical ChatGPT skill is installed and browser readiness passes, route every non-trivial feature, bugfix, architecture, optimization, planning, and review task through its orchestrate mode by default. A `gptweb` keyword is not required. Skip only for explicit local-only or purely mechanical work; setup/readiness failure stops closed.
 ```
 
-- [ ] **Step 2: Change ChatGPT router semantics**
+- [x] **Step 2: Change ChatGPT router semantics**
 
 Keep discovery explicit, but replace per-task opt-in wording with configured-host default-on wording and retain every existing authority/security boundary.
 
-- [ ] **Step 3: Update setup and orchestration references**
+- [x] **Step 3: Update setup and orchestration references**
 
 Rename the setup section to `One-Time Host Enablement`, state that successful projection/readiness enables future default routing, and remove requirements that the user opt in again per repository/task.
 
-- [ ] **Step 4: Pin consult and continuation commands**
+- [x] **Step 4: Pin consult and continuation commands**
 
 The canonical new-turn example must include:
 
@@ -215,15 +215,15 @@ repo-harness chatgpt browser-consult --repo <repo> --provider oracle \
 
 Continuation must repeat `--model gpt-5.6-sol --thinking extended`, preserve the same conversation, and require DOM evidence showing `Model GPT-5.6 Sol` plus `Effort High` while Oracle lacks first-class effort verification.
 
-- [ ] **Step 5: Update the agentic flow reference**
+- [x] **Step 5: Update the agentic flow reference**
 
 Document `explicit one-time setup -> configured-host default-on task routing`; do not imply default browser credential installation.
 
-- [ ] **Step 6: Run focused tests and verify green**
+- [x] **Step 6: Run focused tests and verify green**
 
 Run the Task 1 command. Expected: all selected tests pass.
 
-- [ ] **Step 7: Commit canonical behavior**
+- [x] **Step 7: Commit canonical behavior**
 
 ```bash
 git add SKILL.md assets/skills/repo-harness-chatgpt docs/reference-configs/agentic-development-flow.md
@@ -241,31 +241,31 @@ git commit -m "feat: default configured hosts to GPT-first orchestration"
 - Consumes: Git remotes `origin` and `upstream`, an accepted fork `main`, GPT-first review, root Required Checks.
 - Produces: a fail-closed integration-branch update procedure and routing guard against direct npm refresh.
 
-- [ ] **Step 1: Add failing runbook assertions**
+- [x] **Step 1: Add failing runbook assertions**
 
 Assert upgrade guidance contains `fork-managed host`, `update/upstream-`, `integration PR`, `same conversation`, `bun run check:ci`, `operator approval`, and forbids direct npm-channel update.
 
-- [ ] **Step 2: Run the focused action-command test and verify red**
+- [x] **Step 2: Run the focused action-command test and verify red**
 
 ```bash
 bun test tests/action-command-skills.test.ts
 ```
 
-- [ ] **Step 3: Write the canonical runbook**
+- [x] **Step 3: Write the canonical runbook**
 
 Document fetch, integration branch creation, old/new SHA binding, GPT impact review, merge/conflict policy, CI/smoke/canary, same-conversation review, operator approval, merge/tag/install, and rollback. Use Git commands only; do not add an overlay patch manager.
 
-- [ ] **Step 4: Route fork-managed upgrades to the runbook**
+- [x] **Step 4: Route fork-managed upgrades to the runbook**
 
 Update `upgrade.md` so source-checkout/fork-managed requests stop before `repo-harness update` and follow the tracked runbook.
 
-- [ ] **Step 5: Run focused tests and verify green**
+- [x] **Step 5: Run focused tests and verify green**
 
 ```bash
 bun test tests/action-command-skills.test.ts
 ```
 
-- [ ] **Step 6: Commit governance**
+- [x] **Step 6: Commit governance**
 
 ```bash
 git add deploy/runbooks/fork-upstream-update.md assets/skills/repo-harness-setup/references/upgrade.md tests/action-command-skills.test.ts
@@ -281,27 +281,27 @@ git commit -m "docs: govern forked upstream updates"
 - Consumes: Tasks 1-3 candidate.
 - Produces: CI-equivalent and clean projection evidence.
 
-- [ ] **Step 1: Run skill/package checks**
+- [x] **Step 1: Run skill/package checks**
 
 ```bash
 bun test tests/skill-surface/chatgpt-package.test.ts tests/action-command-skills.test.ts tests/skill-routing-eval.test.ts tests/cli/chatgpt-browser.test.ts
 ```
 
-- [ ] **Step 2: Run root Required Checks**
+- [x] **Step 2: Run root Required Checks**
 
 Run every command listed in root `AGENTS.md` under `## Required Checks`.
 
-- [ ] **Step 3: Run CI-equivalent gate**
+- [x] **Step 3: Run CI-equivalent gate**
 
 ```bash
 bun run check:ci
 ```
 
-- [ ] **Step 4: Run clean install/adoption smoke**
+- [x] **Step 4: Run clean install/adoption smoke**
 
 Create a disposable repo outside the source checkout, initialize it from this source candidate, confirm canonical skill projection points to the durable checkout, and confirm a non-trivial repo-harness prompt routes GPT-first without `gptweb`.
 
-- [ ] **Step 5: Commit required projections**
+- [x] **Step 5: Commit required projections**
 
 Stage only manifest-owned outputs changed by canonical sync commands and commit them with their owning source changes.
 
@@ -367,29 +367,29 @@ Record only non-secret commit identities in the operator runtime state; never st
 <!-- [NOTE]: prefixed inline. Claude processes all and revises. -->
 
 ## Task Breakdown
-- [ ] **Step 1: Replace explicit-per-task expectations with configured-host default expectations**
-- [ ] **Step 2: Pin the canonical consult example**
-- [ ] **Step 3: Add a routing-eval case**
-- [ ] **Step 4: Run the focused tests and verify red**
-- [ ] **Step 5: Commit the red tests**
-- [ ] **Step 1: Route non-trivial active work from the root skill**
-- [ ] **Step 2: Change ChatGPT router semantics**
-- [ ] **Step 3: Update setup and orchestration references**
-- [ ] **Step 4: Pin consult and continuation commands**
-- [ ] **Step 5: Update the agentic flow reference**
-- [ ] **Step 6: Run focused tests and verify green**
-- [ ] **Step 7: Commit canonical behavior**
-- [ ] **Step 1: Add failing runbook assertions**
-- [ ] **Step 2: Run the focused action-command test and verify red**
-- [ ] **Step 3: Write the canonical runbook**
-- [ ] **Step 4: Route fork-managed upgrades to the runbook**
-- [ ] **Step 5: Run focused tests and verify green**
-- [ ] **Step 6: Commit governance**
-- [ ] **Step 1: Run skill/package checks**
-- [ ] **Step 2: Run root Required Checks**
-- [ ] **Step 3: Run CI-equivalent gate**
-- [ ] **Step 4: Run clean install/adoption smoke**
-- [ ] **Step 5: Commit required projections**
+- [x] **Step 1: Replace explicit-per-task expectations with configured-host default expectations**
+- [x] **Step 2: Pin the canonical consult example**
+- [x] **Step 3: Add a routing-eval case**
+- [x] **Step 4: Run the focused tests and verify red**
+- [x] **Step 5: Commit the red tests**
+- [x] **Step 1: Route non-trivial active work from the root skill**
+- [x] **Step 2: Change ChatGPT router semantics**
+- [x] **Step 3: Update setup and orchestration references**
+- [x] **Step 4: Pin consult and continuation commands**
+- [x] **Step 5: Update the agentic flow reference**
+- [x] **Step 6: Run focused tests and verify green**
+- [x] **Step 7: Commit canonical behavior**
+- [x] **Step 1: Add failing runbook assertions**
+- [x] **Step 2: Run the focused action-command test and verify red**
+- [x] **Step 3: Write the canonical runbook**
+- [x] **Step 4: Route fork-managed upgrades to the runbook**
+- [x] **Step 5: Run focused tests and verify green**
+- [x] **Step 6: Commit governance**
+- [x] **Step 1: Run skill/package checks**
+- [x] **Step 2: Run root Required Checks**
+- [x] **Step 3: Run CI-equivalent gate**
+- [x] **Step 4: Run clean install/adoption smoke**
+- [x] **Step 5: Commit required projections**
 - [ ] **Step 1: Install and authenticate GitHub CLI**
 - [ ] **Step 2: Create or reuse the authenticated user's fork**
 - [ ] **Step 3: Set remotes safely**
