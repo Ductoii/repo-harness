@@ -352,7 +352,12 @@ describe("repo-harness action command skills", () => {
     expect(continueMode).toContain("repo-harness chatgpt browser-open");
     expect(consult).toContain("date -u +%Y%m%dT%H%M%SZ");
     expect(consult).toContain(".ai/harness/handoff/gptpro/gptpro-${stamp}-<slug>.md");
-    expect(consult).toContain("--model gpt-5.5-pro");
+    expect(consult).toContain("--model gpt-5.6-sol");
+    expect(consult).toContain("--thinking extended");
+    expect(consult).not.toContain("--model gpt-5.5-pro");
+    expect(continueMode).toContain("--model gpt-5.6-sol");
+    expect(continueMode).toContain("--thinking extended");
+    expect(continueMode).toContain("Effort High");
     expect(continueMode).toContain("docs/researches/YYYYMMDD-<topic>.md");
     expect(continueMode).toContain("raw artifact path");
     expect(consult).toContain("15");
