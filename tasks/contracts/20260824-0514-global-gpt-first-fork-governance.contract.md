@@ -87,7 +87,6 @@ allowed_paths:
   - assets/skills/repo-harness-chatgpt/
   - assets/skills/repo-harness-setup/references/upgrade.md
   - assets/reference-configs/agentic-development-flow.md
-  - .ai/hooks/.projection.json
   - deploy/runbooks/fork-upstream-update.md
   - docs/reference-configs/agentic-development-flow.md
   - docs/superpowers/
