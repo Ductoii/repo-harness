@@ -1,6 +1,6 @@
 # Plan: Global GPT-First Fork Governance
 
-> **Status**: Approved
+> **Status**: Executing
 > **Created**: 20260824-0514
 > **Slug**: global-gpt-first-fork-governance
 > **Planning Source**: codex-plan

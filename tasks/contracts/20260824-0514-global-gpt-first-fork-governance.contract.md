@@ -1,12 +1,12 @@
 # Task Contract: global-gpt-first-fork-governance
 
-> **Status**: Partial
+> **Status**: Active
 > **Plan**: plans/plan-20260824-0514-global-gpt-first-fork-governance.md
 > **Task Profile**: code-change
 > <!-- legal values: code-change | docs-only | ledger-closeout | migration | eval-only | delegated-run | bugfix (omit for legacy passthrough); see docs/reference-configs/sprint-contracts.md -->
 > **Owner**: root
 > **Capability ID**: root
-> **Last Updated**: 2026-08-24 05:14
+> **Last Updated**: 2026-08-24 05:38
 > **Review File**: `tasks/reviews/20260824-0514-global-gpt-first-fork-governance.review.md`
 > **Notes File**: `tasks/notes/20260824-0514-global-gpt-first-fork-governance.notes.md`
 > **Exemplar**: `docs/reference-configs/contract-brief-example.md`
@@ -86,6 +86,8 @@ allowed_paths:
   - SKILL.md
   - assets/skills/repo-harness-chatgpt/
   - assets/skills/repo-harness-setup/references/upgrade.md
+  - assets/reference-configs/agentic-development-flow.md
+  - .ai/hooks/.projection.json
   - deploy/runbooks/fork-upstream-update.md
   - docs/reference-configs/agentic-development-flow.md
   - docs/superpowers/
