@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { repoHarnessRepoIdFor, type RepoHarnessAccessMode } from '../../src/effects/repo-registry';
@@ -1498,8 +1498,10 @@ describe('MCP reader tools', () => {
             if (event.kind !== 'complete') return;
             identityAttempts.push(event.attempt);
             if (event.attempt !== 0) return;
+            const replacement = join(repoRoot, '.ignore.replacement');
+            writeFileSync(replacement, '');
             rmSync(join(repoRoot, '.ignore'), { force: true });
-            writeFileSync(join(repoRoot, '.ignore'), '');
+            renameSync(replacement, join(repoRoot, '.ignore'));
           },
         },
       };

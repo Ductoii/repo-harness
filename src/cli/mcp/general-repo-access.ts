@@ -1237,7 +1237,13 @@ function rememberSnapshot(snapshot: VisibleEntrySnapshot): VisibleEntrySnapshot 
   }
 
   const cached = SNAPSHOT_CACHE.get(snapshot.cacheKey);
-  if (cached && cached.id === snapshot.id && Date.parse(cached.expiresAt) > now) {
+  if (
+    cached
+    && cached.id === snapshot.id
+    && cached.partial === snapshot.partial
+    && cached.walkerErrors === snapshot.walkerErrors
+    && Date.parse(cached.expiresAt) > now
+  ) {
     const cacheHit = {
       ...cached,
       cacheHit: true,
