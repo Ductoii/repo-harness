@@ -640,13 +640,15 @@ describe("Workflow helper scripts", () => {
     }
   }, 30_000);
 
-  test("contract-worktree finish runs architecture freshness before sprint verification", () => {
+  test("contract-worktree finish validates its reusable receipt after architecture freshness", () => {
     const script = readFileSync(join(ROOT, "scripts/contract-worktree.sh"), "utf-8");
     expect(script).toContain("check_architecture_freshness");
     expect(script.indexOf('check_architecture_freshness "$target_branch"')).toBeGreaterThan(-1);
     expect(script.indexOf('check_architecture_freshness "$target_branch"')).toBeLessThan(
-      script.indexOf('bash "$helper_dir/verify-sprint.sh"'),
+      script.indexOf('verify_acceptance_receipt "$contract_file"'),
     );
+    const finishBody = script.slice(script.indexOf("finish_worktree()"), script.indexOf("cleanup_worktree()"));
+    expect(finishBody).not.toContain('bash "$helper_dir/verify-sprint.sh"');
   });
 
   test("provider-free merge seal runs after the candidate commit and is reverified before merge or push", () => {

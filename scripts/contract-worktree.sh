@@ -1902,9 +1902,11 @@ finish_worktree() {
 
   frozen_base_sha="$(refresh_and_freeze_base "$gate_base_ref" "$target_branch")"
   finish_attempt_frozen_base="$frozen_base_sha"
-  verify_acceptance_receipt "$contract_file"
   check_architecture_freshness "$target_branch"
-  REPO_HARNESS_TARGET_REPO_ROOT="$REPO_ROOT" bash "$helper_dir/verify-sprint.sh"
+  # Architecture freshness may project candidate files. Validate the receipt
+  # after that boundary so its subject/evidence fingerprint is the final
+  # acceptance proof; rerunning the same contract commands would add no proof.
+  verify_acceptance_receipt "$contract_file"
   [[ "$(git rev-parse "$gate_base_ref^{commit}")" == "$frozen_base_sha" ]] || {
     echo "contract-worktree: target base moved during final verification; restart closeout from the refreshed base" >&2
     exit 1

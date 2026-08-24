@@ -59,13 +59,7 @@ This repository self-hosts the `repo-harness` contract; the former `repo-harness
 ## Required Checks
 
 ```bash
-bun test --timeout 60000
-bash scripts/check-deploy-sql-order.sh
-bash scripts/check-architecture-sync.sh
-bash scripts/check-task-sync.sh
-repo-harness run check-task-workflow --strict
-bun scripts/inspect-project-state.ts --repo . --format text
-bun src/cli/index.ts init --repo . --dry-run
+bun run check:ci
 ```
 
 <!-- BEGIN ARCHITECTURE CONTRACT -->

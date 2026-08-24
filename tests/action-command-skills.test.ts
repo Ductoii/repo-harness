@@ -272,6 +272,31 @@ describe("repo-harness action command skills", () => {
     expect(check).toContain("Does not claim skill-effectiveness authority from dry-run benchmark output");
   });
 
+  test("verification policy has one canonical expensive gate and forbids automatic full-suite retries", () => {
+    const check = readCommand("repo-harness-check");
+    const create = readReference("repo-harness-plan", "create.md");
+    const ci = readFileSync(join(ROOT, "scripts/check-ci.sh"), "utf-8");
+    const requiredChecks = (path: string) =>
+      readFileSync(path, "utf-8").match(/## Required Checks\s+```bash\s+([\s\S]*?)```/)?.[1].trim().split(/\r?\n/) ?? [];
+
+    expect(requiredChecks(join(ROOT, "AGENTS.md"))).toEqual(["bun run check:ci"]);
+    expect(requiredChecks(join(ROOT, "CLAUDE.md"))).toEqual(["bun run check:ci"]);
+    expect(check).toContain("canonical required-check list exactly once");
+    expect(check).toContain("Do not append an aggregate gate or its constituent commands");
+    expect(check).toContain("do not automatically rerun the full required-check list");
+    expect(create).toContain("`tests_pass` owns focused tests");
+    expect(create).toContain("`commands_succeed` copies only the canonical root `## Required Checks`");
+    for (const formerRootGate of [
+      'bun test --timeout "$BUN_TEST_TIMEOUT_MS"',
+      "bash scripts/check-deploy-sql-order.sh",
+      "bash scripts/check-architecture-sync.sh",
+      "bash scripts/check-task-sync.sh",
+      "bash scripts/check-task-workflow.sh --strict",
+      "bun scripts/inspect-project-state.ts --repo . --format text",
+      "bun src/cli/index.ts init --repo . --dry-run",
+    ]) expect(ci).toContain(formerRootGate);
+  });
+
   test("public docs name the target canonical packages and keep internal steps private", () => {
     const skill = readFileSync(join(ROOT, "SKILL.md"), "utf-8");
     const readme = readFileSync(join(ROOT, "README.md"), "utf-8");
