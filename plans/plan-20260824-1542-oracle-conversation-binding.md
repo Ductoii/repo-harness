@@ -1,6 +1,6 @@
 # Plan: Oracle Conversation Binding
 
-> **Status**: Approved
+> **Status**: Review
 > **Created**: 20260824-1542
 > **Slug**: oracle-conversation-binding
 > **Planning Source**: user-approved-plan
@@ -107,8 +107,13 @@ Prevent Oracle follow-ups from attaching to a different ChatGPT conversation, an
 - Existing timeout/heartbeat recovery remains intact.
 
 ## Scope
+- `assets/skills/repo-harness-chatgpt/references/continue.md`
+- `assets/skills/repo-harness-chatgpt/references/delegate.md`
+- `docs/repo-harness-chatgpt-browser-engine.md`
+- `src/cli/chatgpt-browser/engine.ts`
 - `src/cli/chatgpt-browser/oracle-provider.ts`
 - `tests/cli/chatgpt-browser.test.ts`
+- `tasks/todos.md`
 
 ## Non-Scope
 - Oracle upstream internals, DmAube source, browser profile migration, multi-provider fallback.
@@ -119,7 +124,7 @@ Prevent Oracle follow-ups from attaching to a different ChatGPT conversation, an
 - P3: Preserve existing Oracle command and session metadata compatibility.
 
 ## Fragile Assumption
-Oracle 0.16.1 honors `--browser-tab <full conversation URL>` or fails before submission. If false, the wrapper must fail closed rather than reuse the current tab.
+Oracle 0.16.1 navigates a new browser run to `--chatgpt-url <full conversation URL>` and exposes the final URL. If false, the wrapper must fail closed rather than reuse the current conversation.
 
 ## Rejected Alternative
 A global single-session lock does not fix stale active-tab reuse after an earlier run completes.
@@ -131,16 +136,16 @@ Red/green regression for cross-conversation binding and bounded retry; adjacent 
 Revert the patch commit; no persisted schema or user data migration.
 
 ## Task Breakdown
-- [ ] Add failing cross-conversation binding/retry regression.
-- [ ] Bind follow-ups to the stored conversation and add one safe retry.
-- [ ] Run focused and browser-suite verification.
-- [ ] Run GPT Web review and a real two-conversation canary.
+- [x] Add failing cross-conversation binding/retry regression.
+- [x] Bind follow-ups to the stored conversation and add one safe retry.
+- [x] Run focused and browser-suite verification.
+- [x] Run GPT Web review and a real two-conversation canary.
 
 ## Annotations
 <!-- [NOTE]: prefixed inline. Claude processes all and revises. -->
 
 ## Task Breakdown
-- [ ] Add failing cross-conversation binding/retry regression.
-- [ ] Bind follow-ups to the stored conversation and add one safe retry.
-- [ ] Run focused and browser-suite verification.
-- [ ] Run GPT Web review and a real two-conversation canary.
+- [x] Add failing cross-conversation binding/retry regression.
+- [x] Bind follow-ups to the stored conversation and add one safe retry.
+- [x] Run focused and browser-suite verification.
+- [x] Run GPT Web review and a real two-conversation canary.

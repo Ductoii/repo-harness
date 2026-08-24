@@ -49,14 +49,13 @@ export interface BrowserDoctorAgentAction {
   automatic: false;
 }
 
-const PINNED_ORACLE_INSTALL = 'bun add -g @steipete/oracle@0.14.1';
-const PINNED_ORACLE_REPO_LOCAL_INSTALL = 'bun add -D @steipete/oracle@0.14.1';
+const PINNED_ORACLE_INSTALL = 'bun add -g @steipete/oracle@0.16.1';
+const PINNED_ORACLE_REPO_LOCAL_INSTALL = 'bun add -D @steipete/oracle@0.16.1';
 
 const EMPTY_ORACLE_CAPABILITIES = {
   browserEngine: false,
   writeOutput: false,
   browserFollowup: false,
-  sessionFollowup: false,
   browserArchive: false,
   browserModelStrategy: false,
   browserCookiePath: false,

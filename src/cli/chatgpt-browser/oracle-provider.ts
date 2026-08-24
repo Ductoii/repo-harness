@@ -37,7 +37,6 @@ export interface OracleCapabilities {
   browserEngine: boolean;
   writeOutput: boolean;
   browserFollowup: boolean;
-  sessionFollowup: boolean;
   browserArchive: boolean;
   browserModelStrategy: boolean;
   browserCookiePath: boolean;
@@ -121,7 +120,6 @@ function detectCapabilities(helpText: string, browserThinkingTime: boolean): Ora
     browserEngine: has('--engine'),
     writeOutput: has('--write-output'),
     browserFollowup: has('--browser-follow-up'),
-    sessionFollowup: has('--followup'),
     browserArchive: has('--browser-archive'),
     browserModelStrategy: has('--browser-model-strategy'),
     browserCookiePath: has('--browser-cookie-path'),
@@ -194,7 +192,6 @@ function probeBrowserThinkingTime(binary: string): boolean {
 export function buildOracleCommand(input: BrowserConsultInput, answerPath?: string): string[] {
   const args = ['--engine', 'browser', '--browser-archive', 'never', '--prompt', input.prompt];
   if (answerPath) args.push('--write-output', answerPath);
-  if (input.providerSessionId) args.push('--followup', input.providerSessionId);
   if (input.model) args.push('--model', input.model, '--browser-model-strategy', 'select');
   else args.push('--browser-model-strategy', 'current');
   if (input.thinking) args.push('--browser-thinking-time', input.thinking);
@@ -297,6 +294,25 @@ interface OracleProcessResult {
 
 const ORACLE_HARVEST_TIMEOUT_MS = 120_000;
 const PROMPT_COMMIT_TIMEOUT = 'Prompt did not appear in conversation before timeout';
+const NO_CHATGPT_TAB_MATCHED = 'No ChatGPT tab matched';
+const NO_LIVE_CHATGPT_TABS = 'No live ChatGPT tabs found on the configured Chrome DevTools endpoint';
+
+function isMissingChatGptTabError(log: string): boolean {
+  return log.includes(NO_CHATGPT_TAB_MATCHED) || log.includes(NO_LIVE_CHATGPT_TABS);
+}
+
+function normalizeConversationUrl(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'chatgpt.com' || !/^\/c\/[^/]+\/?$/.test(parsed.pathname)) {
+      return undefined;
+    }
+    return `https://chatgpt.com${parsed.pathname.replace(/\/$/, '')}`;
+  } catch {
+    return undefined;
+  }
+}
 
 function normalizePromptPreview(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -334,6 +350,44 @@ async function harvestCommittedAnswer(input: {
   if (harvested.error || harvested.status !== 0 || !harvestMatchesPrompt(log, input.prompt)) return undefined;
   const answer = existsSync(input.answerPath) ? readFileSync(input.answerPath, 'utf-8') : '';
   return answer.trim().length > 0 ? answer : undefined;
+}
+
+async function reopenExpectedConversation(input: {
+  binary: string;
+  providerSessionId: string;
+  expectedConversationUrl: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}): Promise<boolean> {
+  const reopened = await runOracleProcess(input.binary, [
+    'session',
+    input.providerSessionId,
+    '--harvest',
+  ], {
+    cwd: input.cwd,
+    env: input.env,
+    timeoutMs: ORACLE_HARVEST_TIMEOUT_MS,
+  });
+  const log = [reopened.stdout, reopened.stderr].filter(Boolean).join('\n');
+  return !reopened.error
+    && reopened.status === 0
+    && normalizeConversationUrl(extractConversationUrl(log)) === input.expectedConversationUrl;
+}
+
+function readProviderConversationUrl(oracleHomeDir: string, providerSessionId: string): string | undefined {
+  const metaPath = join(oracleHomeDir, 'sessions', providerSessionId, 'meta.json');
+  if (!existsSync(metaPath)) return undefined;
+  try {
+    const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as {
+      browser?: {
+        runtime?: { tabUrl?: string };
+        archive?: { conversationUrl?: string };
+      };
+    };
+    return normalizeConversationUrl(meta.browser?.runtime?.tabUrl ?? meta.browser?.archive?.conversationUrl);
+  } catch {
+    return undefined;
+  }
 }
 
 function runOracleProcess(
@@ -497,10 +551,32 @@ export async function runOracleProvider(input: BrowserConsultInput, bundle: Prom
       : input;
     const oracleHomeDir = resolveOracleHomeDir(input);
     mkdirSync(oracleHomeDir, { recursive: true });
+    const storedConversationUrl = input.providerSessionId
+      ? readProviderConversationUrl(oracleHomeDir, input.providerSessionId)
+      : undefined;
+    const effectiveProviderInput = input.providerSessionId && !normalizeConversationUrl(providerInput.chatgptUrl) && storedConversationUrl
+      ? { ...providerInput, chatgptUrl: storedConversationUrl }
+      : providerInput;
+    const expectedConversationUrl = input.providerSessionId
+      ? normalizeConversationUrl(effectiveProviderInput.chatgptUrl)
+      : undefined;
+    if (input.providerSessionId && !expectedConversationUrl) {
+      return {
+        status: 'failed',
+        output: 'Oracle follow-up has no exact ChatGPT conversation URL.',
+        command: [resolution.binary, ...buildOracleCommand(effectiveProviderInput)],
+        oracleBinary: resolution.binary,
+        error: {
+          code: 'ORACLE_CONVERSATION_URL_MISSING',
+          message: 'Oracle follow-up requires an exact saved ChatGPT conversation URL',
+          recovery: 'Inspect the source Oracle provider session and restore its conversation URL before sending a follow-up.',
+        },
+      };
+    }
     const answerPath = join(answerDir, 'answer.md');
-    const args = buildOracleCommand(providerInput, answerPath);
+    const args = buildOracleCommand(effectiveProviderInput, answerPath);
     const command = [resolution.binary, ...args];
-    const result = await runOracleProcess(resolution.binary, args, {
+    const processOptions: Parameters<typeof runOracleProcess>[2] = {
       cwd: runCwd,
       env: buildOracleEnv(oracleHomeDir),
       timeoutMs: input.timeoutMs ?? 1_800_000,
@@ -510,19 +586,50 @@ export async function runOracleProvider(input: BrowserConsultInput, bundle: Prom
         return harvestCommittedAnswer({
           binary: resolution.binary!,
           providerSessionId,
-          prompt: providerInput.prompt,
+          prompt: effectiveProviderInput.prompt,
           answerPath,
           cwd: runCwd,
           env: buildOracleEnv(oracleHomeDir),
         });
       },
-    });
+    };
+    let result = await runOracleProcess(resolution.binary, args, processOptions);
+    const firstAttemptLog = [result.stdout, result.stderr].filter(Boolean).join('\n');
+    if (expectedConversationUrl && result.status !== 0 && isMissingChatGptTabError(firstAttemptLog)) {
+      const reopened = await reopenExpectedConversation({
+        binary: resolution.binary,
+        providerSessionId: input.providerSessionId!,
+        expectedConversationUrl,
+        cwd: runCwd,
+        env: buildOracleEnv(oracleHomeDir),
+      });
+      if (reopened) result = await runOracleProcess(resolution.binary, args, processOptions);
+    }
     const stdout = result.stdout?.trimEnd() ?? '';
     const stderr = result.stderr?.trimEnd() ?? '';
     const log = [stdout, stderr ? `\n[stderr]\n${stderr}` : ''].filter(Boolean).join('\n').trimEnd();
     const oracleVersion = detectVersion(`${stdout}\n${stderr}`);
-    const conversationUrl = extractConversationUrl(log);
     const providerSessionId = extractProviderSessionId(log);
+    const conversationUrl = providerSessionId
+      ? readProviderConversationUrl(oracleHomeDir, providerSessionId) ?? extractConversationUrl(log)
+      : extractConversationUrl(log);
+
+    if (expectedConversationUrl && normalizeConversationUrl(conversationUrl) !== expectedConversationUrl) {
+      return {
+        status: 'failed',
+        output: log || 'Oracle follow-up did not bind the expected ChatGPT conversation.',
+        command,
+        oracleBinary: resolution.binary,
+        oracleVersion,
+        conversationUrl,
+        providerSessionId,
+        error: {
+          code: 'ORACLE_CONVERSATION_MISMATCH',
+          message: 'Oracle follow-up did not prove the expected ChatGPT conversation',
+          recovery: 'Do not resend automatically. Inspect the saved Oracle session and retry only after confirming the prompt was not submitted.',
+        },
+      };
+    }
 
     if (result.completionOutput) {
       return {

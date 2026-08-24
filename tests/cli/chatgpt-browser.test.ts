@@ -1056,6 +1056,12 @@ describe('chatgpt browser command', () => {
       const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
       meta.providerSessionId = 'oracle_upstream_timeout_123';
       writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+      const expectedUrl = 'https://chatgpt.com/c/timeout-conversation-123';
+      const providerSessionDir = join(repoRoot, '.ai/harness/chatgpt/oracle-home/sessions/oracle_upstream_timeout_123');
+      mkdirSync(providerSessionDir, { recursive: true });
+      writeFileSync(join(providerSessionDir, 'meta.json'), JSON.stringify({
+        browser: { runtime: { tabUrl: expectedUrl } },
+      }, null, 2) + '\n');
 
       const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-harvest-'));
       try {
@@ -1078,6 +1084,7 @@ describe('chatgpt browser command', () => {
             '  process.exit(0);',
             '}',
             "console.log('Session ID: oracle_followup_timeout_456');",
+            "console.log(`URL: ${process.env.FAKE_ORACLE_EXPECTED_URL}`);",
             "if (process.env.FAKE_ORACLE_HANG === '1') await new Promise(() => {});",
             "console.error('ERROR: Prompt did not appear in conversation before timeout (send may have failed)');",
             'process.exit(1);',
@@ -1100,6 +1107,7 @@ describe('chatgpt browser command', () => {
           ...process.env,
           FAKE_ORACLE_INVOCATIONS: invocationLog,
           FAKE_ORACLE_LAST_USER: prompt,
+          FAKE_ORACLE_EXPECTED_URL: expectedUrl,
         });
         expect(recovered.status).toBe(0);
         const recoveredPayload = JSON.parse(recovered.stdout);
@@ -1107,7 +1115,8 @@ describe('chatgpt browser command', () => {
         expect(readFileSync(recoveredPayload.paths.output, 'utf-8')).toBe('Recovered boundary answer.\n');
         const invocations = readFileSync(invocationLog, 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
         expect(invocations).toHaveLength(2);
-        expect(invocations[0]).toContain('--followup');
+        expect(invocations[0]).toEqual(expect.arrayContaining(['--chatgpt-url', expectedUrl]));
+        expect(invocations[0]).not.toContain('--followup');
         expect(invocations[1]).toEqual(expect.arrayContaining(['session', 'oracle_followup_timeout_456', '--harvest', '--write-output']));
 
         const stale = runChatgpt([
@@ -1124,6 +1133,7 @@ describe('chatgpt browser command', () => {
           ...process.env,
           FAKE_ORACLE_INVOCATIONS: invocationLog,
           FAKE_ORACLE_LAST_USER: 'An unrelated old prompt.',
+          FAKE_ORACLE_EXPECTED_URL: expectedUrl,
         });
         expect(stale.status).toBe(0);
         expect(JSON.parse(stale.stdout).status).toBe('failed');
@@ -1145,6 +1155,7 @@ describe('chatgpt browser command', () => {
           ...process.env,
           FAKE_ORACLE_INVOCATIONS: invocationLog,
           FAKE_ORACLE_LAST_USER: timeoutPrompt,
+          FAKE_ORACLE_EXPECTED_URL: expectedUrl,
           FAKE_ORACLE_HANG: '1',
         });
         expect(timedOut.status).toBe(0);
@@ -1173,6 +1184,12 @@ describe('chatgpt browser command', () => {
       const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
       meta.providerSessionId = 'oracle_upstream_stall_123';
       writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+      const expectedUrl = 'https://chatgpt.com/c/stall-conversation-123';
+      const providerSessionDir = join(repoRoot, '.ai/harness/chatgpt/oracle-home/sessions/oracle_upstream_stall_123');
+      mkdirSync(providerSessionDir, { recursive: true });
+      writeFileSync(join(providerSessionDir, 'meta.json'), JSON.stringify({
+        browser: { runtime: { tabUrl: expectedUrl } },
+      }, null, 2) + '\n');
 
       const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-stall-'));
       try {
@@ -1195,6 +1212,7 @@ describe('chatgpt browser command', () => {
             '  process.exit(0);',
             '}',
             "console.log('Session ID: oracle_followup_stall_456');",
+            "console.log(`URL: ${process.env.FAKE_ORACLE_EXPECTED_URL}`);",
             "console.error('[browser] Waiting for ChatGPT response - 59s elapsed; no thinking status detected yet.');",
             'await new Promise(() => {});',
           ].join('\n') + '\n',
@@ -1219,6 +1237,7 @@ describe('chatgpt browser command', () => {
           ...process.env,
           FAKE_ORACLE_INVOCATIONS: invocationLog,
           FAKE_ORACLE_LAST_USER: prompt,
+          FAKE_ORACLE_EXPECTED_URL: expectedUrl,
         });
         const elapsedMs = Date.now() - startedAt;
 
@@ -1387,7 +1406,7 @@ describe('chatgpt browser command', () => {
             '#!/bin/sh',
             'case "$1" in',
             '  --version) printf "%s\\n" "0.13.0";;',
-            '  *) printf "%s\\n" "Usage: oracle --engine browser --browser-archive never --write-output <p> --browser-follow-up <t> --followup <id> --browser-model-strategy current --browser-cookie-path <path> --chatgpt-url <url> --heartbeat <seconds>";;',
+            '  *) printf "%s\\n" "Usage: oracle --engine browser --browser-archive never --write-output <p> --browser-follow-up <t> --browser-model-strategy current --browser-cookie-path <path> --chatgpt-url <url> --heartbeat <seconds>";;',
             'esac',
           ].join('\n'),
         );
@@ -1404,7 +1423,6 @@ describe('chatgpt browser command', () => {
           browserEngine: true,
           writeOutput: true,
           browserFollowup: true,
-          sessionFollowup: true,
           browserArchive: true,
           browserModelStrategy: true,
           browserCookiePath: true,
@@ -1473,7 +1491,6 @@ describe('chatgpt browser command', () => {
           browserEngine: true,
           writeOutput: true,
           browserFollowup: false,
-          sessionFollowup: false,
           browserArchive: false,
           browserModelStrategy: false,
           browserCookiePath: false,
@@ -1481,7 +1498,7 @@ describe('chatgpt browser command', () => {
           chatgptUrl: false,
           heartbeat: false,
         });
-        expect(readiness.oracle.missingCapabilities).toEqual(['browserFollowup', 'sessionFollowup', 'browserArchive', 'browserModelStrategy', 'browserCookiePath', 'browserThinkingTime', 'chatgptUrl', 'heartbeat']);
+        expect(readiness.oracle.missingCapabilities).toEqual(['browserFollowup', 'browserArchive', 'browserModelStrategy', 'browserCookiePath', 'browserThinkingTime', 'chatgptUrl', 'heartbeat']);
         expect(readiness.oracle.error.message).toContain('browserFollowup');
         expect(readiness.agent_actions).toHaveLength(1);
         expect(readiness.agent_actions[0]).toMatchObject({
@@ -1522,7 +1539,7 @@ describe('chatgpt browser command', () => {
       expect(repoLocalReadiness.oracle.resolvedFrom).toBe('node_modules/.bin');
       expect(repoLocalReadiness.agent_actions[0]).toMatchObject({
         id: 'chatgpt-oracle-upgrade-pinned',
-        command: 'bun add -D @steipete/oracle@0.14.1',
+        command: 'bun add -D @steipete/oracle@0.16.1',
       });
 
       const envSelected = runChatgpt(['browser-doctor', '--repo', repoRoot, '--provider', 'oracle', '--json'], ROOT, {
@@ -1540,7 +1557,7 @@ describe('chatgpt browser command', () => {
     });
   }, 30_000);
 
-  test('oracle follow-up uses providerSessionId instead of local sessionId', () => {
+  test('oracle follow-up fails before provider spawn when the source conversation URL is unavailable', () => {
     withRepo((repoRoot) => {
       const initial = runChatgpt([
         'browser-consult',
@@ -1576,10 +1593,12 @@ describe('chatgpt browser command', () => {
       const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-followup-bin-'));
       try {
         const oraclePath = join(binDir, 'oracle');
+        const invocationMarker = join(binDir, 'invoked');
         writeFileSync(
           oraclePath,
           [
             '#!/bin/sh',
+            `touch "${invocationMarker.replace(/\\/g, '/')}"`,
             'ARGS="$*"',
             'OUT=""',
             'PREV=""',
@@ -1605,15 +1624,170 @@ describe('chatgpt browser command', () => {
         ]);
         expect(followup.status).toBe(0);
         const followupPayload = JSON.parse(followup.stdout);
-        const output = readFileSync(followupPayload.paths.output, 'utf-8');
-        expect(output).toContain('--followup oracle_upstream_123');
-        expect(output).not.toContain(initialPayload.sessionId);
-        expect(output).not.toContain('--browser-cookie-path');
-        const followupMeta = JSON.parse(readFileSync(join(repoRoot, '.ai/harness/chatgpt/sessions', followupPayload.sessionId, 'meta.json'), 'utf-8'));
-        // Parent linkage points at the source conversation; the new session's own
-        // providerSessionId reflects what oracle returned for the reopened run.
-        expect(followupMeta.parentProviderSessionId).toBe('oracle_upstream_123');
-        expect(followupMeta.providerSessionId).toBe('oracle_followup_456');
+        expect(followupPayload.status).toBe('failed');
+        expect(followupPayload.error.code).toBe('ORACLE_CONVERSATION_URL_MISSING');
+        expect(existsSync(invocationMarker)).toBe(false);
+      } finally {
+        rmSync(binDir, { recursive: true, force: true });
+      }
+    });
+  }, 30_000);
+
+  test('oracle follow-up reopens and retries the exact source conversation once after a pre-submit attach failure', () => {
+    withRepo((repoRoot) => {
+      const initial = runChatgpt([
+        'browser-consult',
+        '--repo',
+        repoRoot,
+        '--dry-run',
+        '--prompt',
+        'Start.',
+      ]);
+      expect(initial.status).toBe(0);
+      const initialPayload = JSON.parse(initial.stdout);
+      const expectedUrl = 'https://chatgpt.com/c/source-conversation-123';
+      const metaPath = join(repoRoot, '.ai/harness/chatgpt/sessions', initialPayload.sessionId, 'meta.json');
+      const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+      meta.providerSessionId = 'oracle_source_123';
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+      const providerSessionDir = join(repoRoot, '.ai/harness/chatgpt/oracle-home/sessions/oracle_source_123');
+      mkdirSync(providerSessionDir, { recursive: true });
+      writeFileSync(join(providerSessionDir, 'meta.json'), JSON.stringify({
+        browser: { runtime: { tabUrl: expectedUrl } },
+      }, null, 2) + '\n');
+
+      const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-conversation-bind-'));
+      try {
+        const oraclePath = join(binDir, 'oracle');
+        const invocationLog = join(binDir, 'invocations.log');
+        writeFileSync(
+          oraclePath,
+          [
+            '#!/usr/bin/env bun',
+            "import { appendFileSync, existsSync, readFileSync } from 'fs';",
+            'const args = process.argv.slice(2);',
+            'const logPath = process.env.FAKE_ORACLE_INVOCATIONS!;',
+            "const prior = existsSync(logPath) ? readFileSync(logPath, 'utf-8').trim().split('\\n').filter(Boolean).map(JSON.parse) : [];",
+            "appendFileSync(logPath, JSON.stringify(args) + '\\n');",
+            "const expectedUrl = process.env.FAKE_ORACLE_EXPECTED_URL!;",
+            "if (args[0] === 'session' && args.includes('--harvest')) {",
+            "  console.log('State: completed');",
+            "  console.log(`URL: ${expectedUrl}`);",
+            "  console.log('Last user: Start.');",
+            '  process.exit(0);',
+            '}',
+            "const urlIndex = args.indexOf('--chatgpt-url');",
+            "const outputIndex = args.indexOf('--write-output');",
+            "if (urlIndex < 0 || args[urlIndex + 1] !== expectedUrl) {",
+            "  if (outputIndex >= 0) await Bun.write(args[outputIndex + 1], 'WRONG CURRENT TAB\\n');",
+            "  console.log('Session ID: oracle_wrong_tab_456');",
+            '  process.exit(0);',
+            '}',
+            "const priorMainAttempts = prior.filter((entry) => entry[0] !== 'session').length;",
+            'if (priorMainAttempts === 0) {',
+            "  console.error('No live ChatGPT tabs found on the configured Chrome DevTools endpoint.');",
+            '  process.exit(1);',
+            '}',
+            "if (outputIndex >= 0) await Bun.write(args[outputIndex + 1], 'BOUND SOURCE ANSWER\\n');",
+            "console.log('Session ID: oracle_bound_retry_789');",
+            'console.log(`URL: ${expectedUrl}`);',
+          ].join('\n') + '\n',
+        );
+        chmodSync(oraclePath, 0o755);
+
+        const followup = runChatgpt([
+          'browser-followup',
+          '--repo',
+          repoRoot,
+          '--session',
+          initialPayload.sessionId,
+          '--prompt',
+          'Continue safely.',
+          '--oracle-bin',
+          oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_EXPECTED_URL: expectedUrl,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+        });
+
+        expect(followup.status).toBe(0);
+        const payload = JSON.parse(followup.stdout);
+        expect(payload.status).toBe('completed');
+        expect(readFileSync(payload.paths.output, 'utf-8')).toBe('BOUND SOURCE ANSWER\n');
+        const followupMeta = JSON.parse(readFileSync(join(payload.paths.sessionDir, 'meta.json'), 'utf-8'));
+        expect(followupMeta.browser.conversationUrl).toBe(expectedUrl);
+        const invocations = readFileSync(invocationLog, 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
+        expect(invocations).toHaveLength(3);
+        expect(invocations[0]).toEqual(expect.arrayContaining(['--chatgpt-url', expectedUrl]));
+        expect(invocations[0]).not.toContain('--browser-tab');
+        expect(invocations[0]).not.toContain('--followup');
+        expect(invocations[1]).toEqual(expect.arrayContaining(['session', 'oracle_source_123', '--harvest']));
+        expect(invocations[2]).toEqual(expect.arrayContaining(['--chatgpt-url', expectedUrl]));
+        expect(invocations[2]).not.toContain('--browser-tab');
+        expect(invocations[2]).not.toContain('--followup');
+      } finally {
+        rmSync(binDir, { recursive: true, force: true });
+      }
+    });
+  }, 30_000);
+
+  test('oracle follow-up rejects a mismatched or missing returned conversation without resending', () => {
+    withRepo((repoRoot) => {
+      const initial = runChatgpt(['browser-consult', '--repo', repoRoot, '--dry-run', '--prompt', 'Start.']);
+      expect(initial.status).toBe(0);
+      const initialPayload = JSON.parse(initial.stdout);
+      const expectedUrl = 'https://chatgpt.com/c/source-conversation-123';
+      const metaPath = join(repoRoot, '.ai/harness/chatgpt/sessions', initialPayload.sessionId, 'meta.json');
+      const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+      meta.providerSessionId = 'oracle_source_123';
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+      const providerSessionDir = join(repoRoot, '.ai/harness/chatgpt/oracle-home/sessions/oracle_source_123');
+      mkdirSync(providerSessionDir, { recursive: true });
+      writeFileSync(join(providerSessionDir, 'meta.json'), JSON.stringify({
+        browser: { runtime: { tabUrl: expectedUrl } },
+      }, null, 2) + '\n');
+
+      const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-conversation-mismatch-'));
+      try {
+        const oraclePath = join(binDir, 'oracle');
+        const invocationLog = join(binDir, 'invocations.log');
+        writeFileSync(oraclePath, [
+          '#!/usr/bin/env bun',
+          "import { appendFileSync } from 'fs';",
+          'const args = process.argv.slice(2);',
+          "appendFileSync(process.env.FAKE_ORACLE_INVOCATIONS!, JSON.stringify(args) + '\\n');",
+          "const outputIndex = args.indexOf('--write-output');",
+          "if (outputIndex >= 0) await Bun.write(args[outputIndex + 1], 'WRONG CONVERSATION ANSWER\\n');",
+          "console.log('Session ID: oracle_wrong_conversation_456');",
+          "if (process.env.FAKE_ORACLE_RETURN_URL) console.log(`URL: ${process.env.FAKE_ORACLE_RETURN_URL}`);",
+        ].join('\n') + '\n');
+        chmodSync(oraclePath, 0o755);
+
+        const followup = runChatgpt([
+          'browser-followup', '--repo', repoRoot, '--session', initialPayload.sessionId,
+          '--prompt', 'Continue safely.', '--oracle-bin', oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+          FAKE_ORACLE_RETURN_URL: 'https://chatgpt.com/c/different-conversation-999',
+        });
+
+        expect(followup.status).toBe(0);
+        const payload = JSON.parse(followup.stdout);
+        expect(payload.status).toBe('failed');
+        expect(payload.error.code).toBe('ORACLE_CONVERSATION_MISMATCH');
+        const missingUrl = runChatgpt([
+          'browser-followup', '--repo', repoRoot, '--session', initialPayload.sessionId,
+          '--prompt', 'Continue safely.', '--oracle-bin', oraclePath,
+        ], ROOT, { ...process.env, FAKE_ORACLE_INVOCATIONS: invocationLog });
+        expect(missingUrl.status).toBe(0);
+        const missingUrlPayload = JSON.parse(missingUrl.stdout);
+        expect(missingUrlPayload.status).toBe('failed');
+        expect(missingUrlPayload.error.code).toBe('ORACLE_CONVERSATION_MISMATCH');
+
+        const invocations = readFileSync(invocationLog, 'utf-8').trim().split('\n');
+        expect(invocations).toHaveLength(2);
       } finally {
         rmSync(binDir, { recursive: true, force: true });
       }
@@ -1692,6 +1866,11 @@ describe('chatgpt browser command', () => {
     expect(delegate).toContain('browser-consult --dry-run --secret-scan');
     expect(delegate).toContain('PROMPT_SECRET_SCAN_UNAVAILABLE');
     expect(delegate).toContain('meta.security.promptSecretScan');
+    expect(delegate).toContain('never use a direct `oracle --followup`');
     expect(delegate).not.toContain('Because there is no scanner');
+
+    const continuation = readFileSync(join(ROOT, 'assets/skills/repo-harness-chatgpt/references/continue.md'), 'utf-8');
+    expect(continuation).toContain('must use `repo-harness chatgpt browser-followup`');
+    expect(continuation).toContain('read-only `oracle session <providerSessionId> --harvest`');
   });
 });
