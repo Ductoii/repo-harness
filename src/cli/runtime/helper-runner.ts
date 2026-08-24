@@ -364,15 +364,17 @@ function resolveHelperContext(
   env: NodeJS.ProcessEnv,
 ): ResolvedHelperContext {
   const protectedHelper = isProtectedHelper(helper);
-  const protectedRuntime = protectedHelper ? resolveProtectedHelperPlatform() : null;
-  const repoRoot = resolveRepoRoot(cwd, env, protectedHelper, protectedRuntime);
+  const helperPlatform = protectedHelper || process.platform === 'win32'
+    ? resolveProtectedHelperPlatform()
+    : null;
+  const repoRoot = resolveRepoRoot(cwd, env, protectedHelper, helperPlatform);
   const helperRuntime = resolveHelperRuntime(env, !protectedHelper);
   const fileName = resolveHelperFileName(helper, readContractHelpers(helperRuntime.contractPath));
-  if (!fileName) return { resolved: null, runtime: protectedRuntime };
+  if (!fileName) return { resolved: null, runtime: helperPlatform };
 
   return {
     resolved: resolveFromDir(fileName, helperRuntime.helpersRoot, helperRuntime.source, repoRoot),
-    runtime: protectedRuntime,
+    runtime: helperPlatform,
   };
 }
 

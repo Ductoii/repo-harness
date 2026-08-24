@@ -25,6 +25,7 @@ import {
   discoverWindowsProtectedHelperContract,
   resolveProtectedHelperPlatform,
   writeWindowsProtectedHelperContract,
+  type ProtectedHelperPlatform,
 } from "../runtime/protected-helper-platform";
 
 export interface GlobalRuntimeOptions {
@@ -155,6 +156,19 @@ function bindBunRuntimeEnv(env: NodeJS.ProcessEnv | undefined, bunExecutable: st
   return {
     ...(env ?? process.env),
     PATH: [dirname(bunExecutable), activePath].filter(Boolean).join(delimiter),
+  };
+}
+
+export function bindWindowsGlobalRuntimeEnv(
+  env: NodeJS.ProcessEnv,
+  runtime: ProtectedHelperPlatform,
+  platform: NodeJS.Platform = process.platform,
+): NodeJS.ProcessEnv {
+  if (platform !== "win32") return env;
+  return {
+    ...env,
+    PATH: [dirname(runtime.bashBin), env.PATH ?? ""].filter(Boolean).join(runtime.pathDelimiter),
+    REPO_HARNESS_BASH_BIN: runtime.bashBin,
   };
 }
 
@@ -1269,7 +1283,7 @@ export function runGlobalRuntimeSetup(
   const cwd = opts.cwd ?? process.cwd();
   const target = opts.target ?? "both";
   const bunExecutable = resolveBunExecutable(opts.env);
-  const env = bindBunRuntimeEnv(commandEnv(sourceRoot, opts.env), bunExecutable);
+  let env = bindBunRuntimeEnv(commandEnv(sourceRoot, opts.env), bunExecutable);
   const profile = opts.profile ?? readInstalledProfile(env)?.profile ?? "full";
   const updateMode = opts.updateMode === true;
   const steps: GlobalRuntimeStep[] = [];
@@ -1283,6 +1297,9 @@ export function runGlobalRuntimeSetup(
   const protectedHelperPlatform = configureProtectedHelperPlatform(cwd, bunExecutable, env);
   steps.push(protectedHelperPlatform);
   if (protectedHelperPlatform.status === 'failed') return finalizeRuntimeResult(steps);
+  if (process.platform === "win32") {
+    env = bindWindowsGlobalRuntimeEnv(env, resolveProtectedHelperPlatform({ bunExecutable }));
+  }
 
   if (opts.installCli !== false) {
     const install = installCli(sourceRoot, cwd, bunExecutable, env, opts.installSpec);

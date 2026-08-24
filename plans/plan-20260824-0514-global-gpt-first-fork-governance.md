@@ -337,29 +337,42 @@ Report the PR URL, exact head SHA, checks, canary status, and rollback target. D
 ### Task 6: Install the accepted fork globally and verify Sol/High
 
 **Files:**
+- Windows global-runtime shell binding and installed-copy junction projection.
 - User-level managed runtime and host skill projections only; no downstream repo edits.
 
 **Interfaces:**
 - Consumes: operator-approved fork commit.
 - Produces: global CLI/skills sourced from the durable checkout and real browser evidence.
 
-- [ ] **Step 1: Project from the durable checkout**
+- [x] **Step 1: Capture the Windows projection failure and regression guard**
+
+Reproduce the Git Bash symlink failure against the accepted fork and retain a non-zero pre-fix artifact.
+
+- [x] **Step 2: Pin global shell resolution and add native junction projection**
+
+Bind post-preflight shell commands to the verified Git-for-Windows Bash and use a fail-closed Bun directory-junction helper on Windows.
+
+- [ ] **Step 3: Verify and merge the Windows installer repair**
+
+Run focused Windows tests, root Required Checks on native Linux ext4, GPT Web exact-diff review, then merge the reviewed fork PR.
+
+- [ ] **Step 4: Project from the durable checkout**
 
 Run the checkout's update entrypoint without fetching npm CLI code, then project the canonical ChatGPT skill to both hosts. Verify every junction/symlink target resolves inside the durable checkout.
 
-- [ ] **Step 2: Run global doctors**
+- [ ] **Step 5: Run global doctors**
 
 Verify CLI source/version, ChatGPT Oracle readiness, CodeGraph readiness, and host skill discovery without printing credentials.
 
-- [ ] **Step 3: Run dry-run Sol/High projection**
+- [ ] **Step 6: Run dry-run Sol/High projection**
 
 Expected Oracle command contains `gpt-5.6-sol`, `--browser-model-strategy select`, and `--browser-thinking-time extended`.
 
-- [ ] **Step 4: Run a real browser canary**
+- [ ] **Step 7: Run a real browser canary**
 
 Create a real ChatGPT Web conversation, require exact canary output, verify model selection and DOM `Effort High`, and retain ignored evidence outside source commits.
 
-- [ ] **Step 5: Record deployed SHA and rollback SHA**
+- [ ] **Step 8: Record deployed SHA and rollback SHA**
 
 Record only non-secret commit identities in the operator runtime state; never store browser profile paths or tokens in Git.
 
@@ -395,8 +408,11 @@ Record only non-secret commit identities in the operator runtime state; never st
 - [x] **Step 3: Set remotes safely**
 - [x] **Step 4: Push the feature branch and open a PR to fork main**
 - [x] **Step 5: Stop for operator merge approval**
-- [ ] **Step 1: Project from the durable checkout**
-- [ ] **Step 2: Run global doctors**
-- [ ] **Step 3: Run dry-run Sol/High projection**
-- [ ] **Step 4: Run a real browser canary**
-- [ ] **Step 5: Record deployed SHA and rollback SHA**
+- [x] **Step 1: Capture the Windows projection failure and regression guard**
+- [x] **Step 2: Pin global shell resolution and add native junction projection**
+- [ ] **Step 3: Verify and merge the Windows installer repair**
+- [ ] **Step 4: Project from the durable checkout**
+- [ ] **Step 5: Run global doctors**
+- [ ] **Step 6: Run dry-run Sol/High projection**
+- [ ] **Step 7: Run a real browser canary**
+- [ ] **Step 8: Record deployed SHA and rollback SHA**

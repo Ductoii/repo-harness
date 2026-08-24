@@ -37,6 +37,7 @@ describe('Windows protected-helper runtime smoke', () => {
         REPO_HARNESS_BUN_BIN: 'C:\\repo-harness-attacker\\bun.exe',
       };
       const cases = [
+        { helper: 'check-task-workflow', args: ['--help'], output: 'Usage:' },
         { helper: 'acceptance-receipt', args: ['path'], output: '.repo-harness' },
         { helper: 'merge-gate', args: ['fingerprint', '--base', 'HEAD'], output: 'required' },
         { helper: 'contract-worktree', args: ['status'], output: '[ContractWorktree]' },
