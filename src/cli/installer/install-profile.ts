@@ -945,15 +945,40 @@ export function pathEndsWithRelative(
   return normalizedCandidate === normalizedRelative || normalizedCandidate.endsWith(`/${normalizedRelative}`);
 }
 
-function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
+export function executableCandidatePaths(
+  name: string,
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
   const home = env.HOME ?? homedir();
   const bunRoot = env.BUN_INSTALL ?? join(home, '.bun');
-  const extensions = process.platform === 'win32'
-    ? ['', ...(env.PATHEXT || process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)]
-    : [''];
+  const pathExtensions = platform === 'win32'
+    ? (env.PATHEXT || process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
+    : [];
+  const extensionKeys = new Set<string>();
+  const extensions = pathExtensions.flatMap((extension) => {
+    const normalized = extension.startsWith('.') ? extension : `.${extension}`;
+    const key = normalized.toLowerCase();
+    if (extensionKeys.has(key)) return [];
+    extensionKeys.add(key);
+    return [normalized];
+  });
+  const suffixes = platform === 'win32' && extensions.some((extension) => name.toLowerCase().endsWith(extension.toLowerCase()))
+    ? ['']
+    : ['', ...extensions];
   const directories = [join(bunRoot, 'bin'), ...(env.PATH ?? '').split(delimiter).filter(Boolean)];
-  const candidates = directories.flatMap((directory) => extensions.map((extension) => join(directory, `${name}${extension}`)));
-  return existing([...new Set(candidates)]);
+  const candidateKeys = new Set<string>();
+  return directories.flatMap((directory) => suffixes.flatMap((suffix) => {
+    const candidate = join(directory, `${name}${suffix}`);
+    const key = platform === 'win32' ? candidate.toLowerCase() : candidate;
+    if (candidateKeys.has(key)) return [];
+    candidateKeys.add(key);
+    return [candidate];
+  }));
+}
+
+function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
+  return existing(executableCandidatePaths(name, env));
 }
 
 function skillEvidence(home: string, names: readonly string[]): string[] {

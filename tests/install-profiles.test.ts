@@ -9,6 +9,7 @@ import {
   assertInstallProfile,
   beginInstallHostTransaction,
   commitInstallHostTransaction,
+  executableCandidatePaths,
   INSTALL_PROFILES,
   installProfileHostMutationPaths,
   installedProfileStatus,
@@ -124,6 +125,16 @@ describe('install profiles', () => {
     expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
     expect(pathEndsWithRelative('C:\\Root\\Scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(true);
     expect(pathEndsWithRelative('C:\\Root\\not-scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(false);
+  }));
+
+  testWindows('Windows executable candidates normalize PATHEXT and preserve names with extensions', () => withHome((env) => {
+    env.PATHEXT = '.EXE;.exe;CMD;.Cmd';
+    env.PATH = `${join(env.HOME!, 'bin')}${delimiter}${join(env.HOME!, 'BIN')}`;
+
+    const extensionless = executableCandidatePaths('codegraph', env, 'win32');
+    expect(extensionless.some((candidate) => candidate.toLowerCase().endsWith('codegraph.exe'))).toBe(true);
+    expect(new Set(extensionless.map((candidate) => candidate.toLowerCase())).size).toBe(extensionless.length);
+    expect(executableCandidatePaths('codegraph.exe', env, 'win32').every((candidate) => !candidate.toLowerCase().endsWith('.exe.exe'))).toBe(true);
   }));
 
   test('steady-state vocabulary is minimal/full with protocol 2 and exact 8/12 hook projections', () => withHome((env) => {

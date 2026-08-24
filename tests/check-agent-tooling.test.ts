@@ -348,18 +348,28 @@ describe("check-agent-tooling", () => {
     try {
       const executable = join(root, "codegraph.exe");
       writeFileSync(executable, "fixture");
-      const resolvePathCommand = new Function(
-        "path",
-        "process",
-        "fileIsExecutable",
-        `${functionSource}; return resolvePathCommand;`,
-      )(
-        { delimiter: ";", join },
-        { platform: "win32", env: { PATH: root, PATHEXT: ".exe;.CMD" } },
-        existsSync,
+      const evaluate = (pathext: string, exists: (candidate: string) => boolean) => new Function(
+          "path",
+          "process",
+          "fileIsExecutable",
+          `${functionSource}; return resolvePathCommand;`,
+        )(
+          { delimiter: ";", join },
+          { platform: "win32", env: { PATH: `${root};${root.toUpperCase()}`, PATHEXT: pathext } },
+          exists,
       ) as (command: string) => string | null;
 
-      expect(resolvePathCommand("codegraph")).toBe(executable);
+      const caseInsensitiveExists = (candidate: string) => candidate.toLowerCase() === executable.toLowerCase();
+      const mixedCase = evaluate(".EXE;.exe;CMD;.Cmd", caseInsensitiveExists)("codegraph");
+      const preExtended = evaluate(".EXE;.exe", caseInsensitiveExists)("codegraph.exe");
+      const emptyPathext = evaluate("", caseInsensitiveExists)("codegraph");
+      expect(mixedCase?.toLowerCase()).toBe(executable.toLowerCase());
+      expect(preExtended?.toLowerCase()).toBe(executable.toLowerCase());
+      expect(emptyPathext?.toLowerCase()).toBe(executable.toLowerCase());
+
+      const probes: string[] = [];
+      expect(evaluate(".EXE;.exe;CMD;.Cmd", (candidate) => { probes.push(candidate.toLowerCase()); return false; })("missing")).toBeNull();
+      expect(new Set(probes).size).toBe(probes.length);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
