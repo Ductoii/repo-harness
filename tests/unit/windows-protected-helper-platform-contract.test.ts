@@ -13,6 +13,7 @@ import {
 } from '../../src/cli/runtime/protected-helper-platform';
 import { protectedChildEnv } from '../../src/cli/runtime/helper-runner';
 import { bindWindowsGlobalRuntimeEnv } from '../../src/cli/commands/global-runtime';
+import { resolveHelperShellRuntime } from '../../src/cli/runtime/helper-runner';
 
 const GIT_ROOT = 'C:\\Program Files\\Git';
 const CONTRACT: WindowsProtectedHelperContract = {
@@ -159,6 +160,17 @@ describe('Windows protected-helper platform contract', () => {
     expect(env.REPO_HARNESS_BASH_BIN).toBe(CONTRACT.bash_bin);
     expect(env.PATH?.split(';')[0]).toBe(`${GIT_ROOT}\\bin`);
     expect(env.PATH).toContain('C:\\Windows\\System32');
+  });
+
+  test('unprotected TypeScript helpers do not require a Windows Bash contract', () => {
+    let contractReads = 0;
+    const runtime = resolveHelperShellRuntime('contract-run.ts', null, 'win32', () => {
+      contractReads += 1;
+      throw new Error('missing Windows Bash contract');
+    });
+
+    expect(runtime).toBeNull();
+    expect(contractReads).toBe(0);
   });
 
   test('discovers quoted install PATH entries once and rejects stale runtime state', () => {
