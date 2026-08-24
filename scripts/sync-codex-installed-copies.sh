@@ -131,9 +131,18 @@ require_rsync_for_copy_mode() {
 create_symlink_or_explain() {
   local source="$1"
   local dest="$2"
-  if ln -s "$source" "$dest"; then
-    return 0
-  fi
+  case "$(uname -s 2>/dev/null || true)" in
+    MINGW*|MSYS*|CYGWIN*)
+      if bun "$SOURCE_ROOT/scripts/create-windows-directory-junction.ts" "$source" "$dest"; then
+        return 0
+      fi
+      ;;
+    *)
+      if ln -s "$source" "$dest"; then
+        return 0
+      fi
+      ;;
+  esac
   echo "[sync-installed] unsupported link-mode: symlink capability is unavailable for $dest." >&2
   echo "[sync-installed] Rerun with AGENTIC_DEV_LINK_INSTALLED_COPIES=0 to use copy-mode; copy-mode requires rsync." >&2
   exit 1

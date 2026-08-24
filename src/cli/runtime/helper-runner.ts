@@ -358,6 +358,16 @@ type ResolvedHelperContext = {
   runtime: ProtectedHelperPlatform | null;
 };
 
+export function resolveHelperShellRuntime(
+  fileName: string,
+  protectedRuntime: ProtectedHelperPlatform | null,
+  platform: NodeJS.Platform = process.platform,
+  resolveRuntime: () => ProtectedHelperPlatform = resolveProtectedHelperPlatform,
+): ProtectedHelperPlatform | null {
+  if (protectedRuntime !== null) return protectedRuntime;
+  return platform === 'win32' && fileName.endsWith('.sh') ? resolveRuntime() : null;
+}
+
 function resolveHelperContext(
   helper: string,
   cwd: string,
@@ -369,10 +379,11 @@ function resolveHelperContext(
   const helperRuntime = resolveHelperRuntime(env, !protectedHelper);
   const fileName = resolveHelperFileName(helper, readContractHelpers(helperRuntime.contractPath));
   if (!fileName) return { resolved: null, runtime: protectedRuntime };
+  const shellRuntime = resolveHelperShellRuntime(fileName, protectedRuntime);
 
   return {
     resolved: resolveFromDir(fileName, helperRuntime.helpersRoot, helperRuntime.source, repoRoot),
-    runtime: protectedRuntime,
+    runtime: shellRuntime,
   };
 }
 
