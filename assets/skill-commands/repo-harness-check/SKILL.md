@@ -11,7 +11,7 @@ Use this command when the user asks whether the harness, migration, or release s
 ## Protocol
 
 1. Confirm the repo path and report dirty-worktree boundaries.
-2. Read the canonical required-check list from the target repo's root agent context (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) `## Required Checks` section, then run every command listed there through the global/package helper runtime. This self-host source repo may also use root `scripts/` for source-only maintenance commands. Example only, not a fixed list: `bun test`. If `## Required Checks` is missing or empty, report that as the first blocking finding instead of substituting a default list.
+2. Read the canonical required-check list from the target repo's root agent context (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) `## Required Checks` section, then run that canonical required-check list exactly once through the global/package helper runtime. Do not append an aggregate gate or its constituent commands from a plan, contract, package script, or remembered repo convention; the root list is the sole execution authority. This self-host source repo may also use root `scripts/` for source-only maintenance commands only when those commands are themselves listed there. Example only, not a fixed list: `bun test`. If `## Required Checks` is missing or empty, report that as the first blocking finding instead of substituting a default list.
 3. Run advisory readiness when available:
    - `repo-harness run check-agent-tooling --host both --json`
 4. Treat missing CodeGraph or missing Codex `health`/`check`/`mermaid` as hard failures.
@@ -35,6 +35,7 @@ For a `bugfix` contract, confirm `## Root Cause Evidence` states a testable `roo
 ## Failure Modes
 
 - If any required workflow gate fails, report the first blocking command and stop the readiness claim.
+- When a full required-check command fails, retain that failure and do not automatically rerun the full required-check list. A single focused or isolated reproduction may classify a suspected flake, but it does not replace the failed gate or silently turn it into a pass.
 - If advisory tooling times out, report advisory evidence as unavailable instead of passing it.
 - If eval evidence is missing or all dry-run, mark it non-authoritative or unavailable for skill effectiveness and name the repair command.
 

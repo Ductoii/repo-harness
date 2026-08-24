@@ -107,7 +107,19 @@ function installFixture(container: string): { primary: string; linked: string } 
     chmodSync(join(primary, "scripts", helper), 0o755);
   }
   copyFileSync(join(ROOT, "assets/hooks/lib/workflow-state.sh"), join(primary, ".ai/hooks/lib/workflow-state.sh"));
-  writeFileSync(join(primary, "scripts/acceptance-receipt.ts"), "process.exit(0);\n");
+  writeFileSync(
+    join(primary, "scripts/acceptance-receipt.ts"),
+    [
+      'import { existsSync } from "fs";',
+      'const marker = process.env.ARCHITECTURE_MUTATION_MARKER;',
+      'if (marker && existsSync(marker)) {',
+      '  process.stderr.write("acceptance receipt rejected post-architecture subject drift\\n");',
+      '  process.exit(42);',
+      '}',
+      'process.exit(0);',
+      '',
+    ].join("\n"),
+  );
   writeFileSync(
     join(primary, "scripts/merge-gate.ts"),
     [
@@ -125,8 +137,27 @@ function installFixture(container: string): { primary: string; linked: string } 
       "",
     ].join("\n"),
   );
-  writeExecutable(join(primary, "scripts/check-architecture-sync.sh"), "#!/bin/bash\nexit 0\n");
-  writeExecutable(join(primary, "scripts/verify-sprint.sh"), "#!/bin/bash\nexit 0\n");
+  writeExecutable(
+    join(primary, "scripts/check-architecture-sync.sh"),
+    [
+      "#!/bin/bash",
+      '[[ -z "${ARCHITECTURE_MUTATION_MARKER:-}" ]] || printf "drift\\n" > "$ARCHITECTURE_MUTATION_MARKER"',
+      "exit 0",
+      "",
+    ].join("\n"),
+  );
+  writeExecutable(
+    join(primary, "scripts/verify-sprint.sh"),
+    [
+      "#!/bin/bash",
+      'if [[ -n "${VERIFY_SPRINT_COUNTER_FILE:-}" ]]; then',
+      '  count="$(cat "$VERIFY_SPRINT_COUNTER_FILE")"',
+      '  printf "%s" "$((count + 1))" > "$VERIFY_SPRINT_COUNTER_FILE"',
+      "fi",
+      "exit 0",
+      "",
+    ].join("\n"),
+  );
   writeFileSync(
     join(primary, "src/cli/index.ts"),
     [
@@ -215,6 +246,51 @@ function installFixture(container: string): { primary: string; linked: string } 
 }
 
 describe("contract-worktree single publication commit", () => {
+  test("finish reuses the fresh subject-bound receipt instead of rerunning sprint verification", () => {
+    const container = realpathSync(mkdtempSync(join(tmpdir(), "contract-worktree-reuse-verification-")));
+    try {
+      const { linked } = installFixture(container);
+      const counterFile = join(container, "verify-sprint-count");
+      writeFileSync(counterFile, "0");
+      mkdirSync(join(linked, "src"), { recursive: true });
+      writeFileSync(join(linked, "src/change.ts"), "export const changed = true;\n");
+      commitAll(linked, "checkpoint before receipt reuse");
+
+      const finish = run("bash", ["scripts/contract-worktree.sh", "finish", "--merge"], linked, {
+        VERIFY_SPRINT_COUNTER_FILE: counterFile,
+      });
+
+      expect(finish.status, `${finish.stdout}\n${finish.stderr}`).toBe(0);
+      expect(readFileSync(counterFile, "utf-8")).toBe("0");
+    } finally {
+      rmSync(container, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  test("finish fails closed when receipt verification rejects post-architecture subject drift", () => {
+    const container = realpathSync(mkdtempSync(join(tmpdir(), "contract-worktree-reject-drift-")));
+    try {
+      const { primary, linked } = installFixture(container);
+      const marker = join(container, "architecture-mutated");
+      const mainBefore = run("git", ["rev-parse", "main"], primary).stdout.trim();
+      mkdirSync(join(linked, "src"), { recursive: true });
+      writeFileSync(join(linked, "src/change.ts"), "export const changed = true;\n");
+      commitAll(linked, "checkpoint before rejected receipt");
+
+      const finish = run("bash", ["scripts/contract-worktree.sh", "finish", "--merge"], linked, {
+        ARCHITECTURE_MUTATION_MARKER: marker,
+      });
+
+      expect(finish.status).not.toBe(0);
+      expect(finish.stderr).toContain("acceptance receipt rejected post-architecture subject drift");
+      expect(existsSync(marker)).toBe(true);
+      expect(run("git", ["rev-parse", "main"], primary).stdout.trim()).toBe(mainBefore);
+      expect(existsSync(linked)).toBe(true);
+    } finally {
+      rmSync(container, { recursive: true, force: true });
+    }
+  }, 30_000);
+
   test("finish --merge publishes all checkpoints and lifecycle output as one target commit", () => {
     const container = realpathSync(mkdtempSync(join(tmpdir(), "contract-worktree-single-publication-")));
     try {

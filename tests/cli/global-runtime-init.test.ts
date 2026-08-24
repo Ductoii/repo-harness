@@ -296,6 +296,7 @@ describe('install command global runtime bootstrap', () => {
         HOME: home,
         BUN_INSTALL: join(home, '.bun'),
         PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+        REPO_HARNESS_NODE_BIN: join(fakeBin, 'node'),
       };
       const harnessVersion = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version as string;
       setupManagedRuntimeReadback(home, fakeBin, harnessVersion);

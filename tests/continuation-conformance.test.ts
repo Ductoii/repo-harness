@@ -906,7 +906,8 @@ describe('host Goal conformance: the full tick over a disposable repository', ()
 
       // The gate stubs record what the driver actually invoked, independent of
       // the driver's own log: every completion gate ran prepare -> record ->
-      // verify in that order, once per closeout.
+      // verify the fresh receipt after architecture freshness, without rerunning
+      // the sprint gate whose subject-bound evidence the receipt already seals.
       // Timestamped artifact stems are fixture-generated; the gate identity that
       // matters is the row, so normalize the stem prefix away.
       const gateCalls = readFileSync(fixture.gateLog, 'utf-8')
@@ -918,7 +919,6 @@ describe('host Goal conformance: the full tick over a disposable repository', ()
         'acceptance-receipt record',
         'verify-sprint ',
         `acceptance-receipt verify --contract tasks/contracts/${row}.contract.md --verification .ai/harness/checks/latest.json`,
-        'verify-sprint ',
         `acceptance-receipt verify --contract tasks/contracts/${row}.contract.md --verification .ai/harness/checks/latest.json`,
         `acceptance-receipt verify --contract tasks/contracts/${row}.contract.md --verification .ai/harness/checks/latest.json`,
       ];

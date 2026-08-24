@@ -156,7 +156,8 @@ describe("Bootstrap Script Contracts", () => {
     expect(claude).not.toContain("gstack");
     expect(claude).toContain("operations.deploy_sql");
     expect(agents).toContain("tasks/todos.md");
-    expect(agents).toContain("repo-harness run check-task-workflow --strict");
+    expect(agents).toContain("bun run check:ci");
+    expect(agents).not.toContain("repo-harness run check-task-workflow --strict");
     expect(agents).toContain("check-agent-tooling.sh --host both --check-updates");
     expect(agents).toContain("operations.deploy_sql");
   });
