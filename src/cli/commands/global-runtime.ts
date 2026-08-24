@@ -1,6 +1,6 @@
 import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync } from "fs";
 import { homedir, tmpdir, userInfo } from "os";
-import { delimiter, dirname, join, relative, resolve, sep } from "path";
+import { delimiter, dirname, join, relative, resolve, sep, win32 } from "path";
 import { fileURLToPath } from "url";
 import { ARCHCONTEXT_NODE_RANGE, productVersionManifest } from "archctx-contracts";
 import { configureBrainRoot, defaultBrainRootChoice, expandHomePath } from "./brain-root";
@@ -167,7 +167,7 @@ export function bindWindowsGlobalRuntimeEnv(
   if (platform !== "win32") return env;
   return {
     ...env,
-    PATH: [dirname(runtime.bashBin), env.PATH ?? ""].filter(Boolean).join(runtime.pathDelimiter),
+    PATH: [win32.dirname(runtime.bashBin), env.PATH ?? ""].filter(Boolean).join(runtime.pathDelimiter),
     REPO_HARNESS_BASH_BIN: runtime.bashBin,
   };
 }
