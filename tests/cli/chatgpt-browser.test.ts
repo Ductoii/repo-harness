@@ -1157,6 +1157,85 @@ describe('chatgpt browser command', () => {
     });
   }, 30_000);
 
+  test('oracle provider harvests a completed response while the live watcher is stalled', () => {
+    withRepo((repoRoot) => {
+      const initial = runChatgpt([
+        'browser-consult',
+        '--repo',
+        repoRoot,
+        '--dry-run',
+        '--prompt',
+        'Start the conversation.',
+      ]);
+      expect(initial.status).toBe(0);
+      const initialPayload = JSON.parse(initial.stdout);
+      const metaPath = join(repoRoot, '.ai/harness/chatgpt/sessions', initialPayload.sessionId, 'meta.json');
+      const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+      meta.providerSessionId = 'oracle_upstream_stall_123';
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+
+      const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-stall-'));
+      try {
+        const oraclePath = join(binDir, 'oracle');
+        const invocationLog = join(binDir, 'invocations.log');
+        writeFileSync(
+          oraclePath,
+          [
+            '#!/usr/bin/env bun',
+            "import { appendFileSync } from 'fs';",
+            'const args = process.argv.slice(2);',
+            "appendFileSync(process.env.FAKE_ORACLE_INVOCATIONS!, JSON.stringify(args) + '\\n');",
+            "if (args[0] === 'session' && args.includes('--harvest')) {",
+            "  const outputIndex = args.indexOf('--write-output');",
+            "  if (outputIndex >= 0) await Bun.write(args[outputIndex + 1], 'Recovered live answer.\\n');",
+            "  console.log('State: completed');",
+            "  console.log(`Last user: ${process.env.FAKE_ORACLE_LAST_USER}`);",
+            "  console.log('---');",
+            "  console.log('Recovered live answer.');",
+            '  process.exit(0);',
+            '}',
+            "console.log('Session ID: oracle_followup_stall_456');",
+            "console.error('[browser] Waiting for ChatGPT response - 59s elapsed; no thinking status detected yet.');",
+            'await new Promise(() => {});',
+          ].join('\n') + '\n',
+        );
+        chmodSync(oraclePath, 0o755);
+
+        const prompt = 'Recover this exact live-stalled follow-up.';
+        const startedAt = Date.now();
+        const result = runChatgpt([
+          'browser-followup',
+          '--repo',
+          repoRoot,
+          '--session',
+          initialPayload.sessionId,
+          '--prompt',
+          prompt,
+          '--timeout-ms',
+          '5000',
+          '--oracle-bin',
+          oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+          FAKE_ORACLE_LAST_USER: prompt,
+        });
+        const elapsedMs = Date.now() - startedAt;
+
+        expect(result.status).toBe(0);
+        const payload = JSON.parse(result.stdout);
+        expect(payload.status).toBe('completed');
+        expect(readFileSync(payload.paths.output, 'utf-8')).toBe('Recovered live answer.\n');
+        expect(elapsedMs).toBeLessThan(3000);
+        const invocations = readFileSync(invocationLog, 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
+        expect(invocations).toHaveLength(2);
+        expect(invocations[1]).toEqual(expect.arrayContaining(['session', 'oracle_followup_stall_456', '--harvest', '--write-output']));
+      } finally {
+        rmSync(binDir, { recursive: true, force: true });
+      }
+    });
+  }, 15_000);
+
   test('oracle provider maps thinking to Oracle browser thinking time', () => {
     withRepo((repoRoot) => {
       const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-thinking-'));

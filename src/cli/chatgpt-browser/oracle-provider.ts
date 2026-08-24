@@ -291,6 +291,7 @@ interface OracleProcessResult {
   stderr: string;
   status: number | null;
   signal: NodeJS.Signals | null;
+  completionOutput?: string;
   error?: Error;
 }
 
@@ -338,21 +339,28 @@ async function harvestCommittedAnswer(input: {
 function runOracleProcess(
   binary: string,
   args: string[],
-  opts: { cwd: string; env: NodeJS.ProcessEnv; timeoutMs: number },
+  opts: {
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    timeoutMs: number;
+    completionProbe?: (snapshot: { stdout: string; stderr: string }) => Promise<string | undefined>;
+  },
 ): Promise<OracleProcessResult> {
   return new Promise((resolveResult) => {
     let stdout = '';
     let stderr = '';
     let spawnError: Error | undefined;
     let timedOut = false;
+    let completionOutput: string | undefined;
+    let waitingSignalsProbed = 0;
+    let probeInFlight = false;
     let killTimer: NodeJS.Timeout | undefined;
     const child = spawn(binary, args, {
       cwd: opts.cwd,
       env: opts.env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const timeout = setTimeout(() => {
-      timedOut = true;
+    const terminateChild = () => {
       if (process.platform === 'win32' && child.pid) {
         const terminated = spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
         if (terminated.error || terminated.status !== 0) child.kill('SIGTERM');
@@ -360,12 +368,36 @@ function runOracleProcess(
         child.kill('SIGTERM');
         killTimer = setTimeout(() => child.kill('SIGKILL'), 5_000);
       }
+    };
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      terminateChild();
     }, opts.timeoutMs);
+    const probeCompletedResponse = () => {
+      if (!opts.completionProbe || probeInFlight || completionOutput) return;
+      const waitingSignals = stderr.match(/\[browser\] Waiting for ChatGPT response\b/g)?.length ?? 0;
+      if (waitingSignals <= waitingSignalsProbed) return;
+      if (!extractProviderSessionId(`${stdout}\n${stderr}`)) return;
+      waitingSignalsProbed = waitingSignals;
+      probeInFlight = true;
+      void opts.completionProbe({ stdout, stderr })
+        .then((answer) => {
+          if (!answer || completionOutput) return;
+          completionOutput = answer;
+          terminateChild();
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          probeInFlight = false;
+          probeCompletedResponse();
+        });
+    };
     const collect = (chunk: Buffer | string, stream: 'stdout' | 'stderr') => {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf-8');
       if (stream === 'stdout') stdout += text;
       else stderr += text;
       process.stderr.write(text);
+      probeCompletedResponse();
     };
     child.stdout?.setEncoding('utf-8');
     child.stderr?.setEncoding('utf-8');
@@ -382,6 +414,7 @@ function runOracleProcess(
         stderr,
         status,
         signal,
+        completionOutput,
         error: spawnError ?? (timedOut ? new Error(`oracle timed out after ${opts.timeoutMs}ms`) : undefined),
       });
     });
@@ -471,6 +504,18 @@ export async function runOracleProvider(input: BrowserConsultInput, bundle: Prom
       cwd: runCwd,
       env: buildOracleEnv(oracleHomeDir),
       timeoutMs: input.timeoutMs ?? 1_800_000,
+      completionProbe: async ({ stdout, stderr }) => {
+        const providerSessionId = extractProviderSessionId(`${stdout}\n${stderr}`);
+        if (!providerSessionId) return undefined;
+        return harvestCommittedAnswer({
+          binary: resolution.binary!,
+          providerSessionId,
+          prompt: providerInput.prompt,
+          answerPath,
+          cwd: runCwd,
+          env: buildOracleEnv(oracleHomeDir),
+        });
+      },
     });
     const stdout = result.stdout?.trimEnd() ?? '';
     const stderr = result.stderr?.trimEnd() ?? '';
@@ -478,6 +523,19 @@ export async function runOracleProvider(input: BrowserConsultInput, bundle: Prom
     const oracleVersion = detectVersion(`${stdout}\n${stderr}`);
     const conversationUrl = extractConversationUrl(log);
     const providerSessionId = extractProviderSessionId(log);
+
+    if (result.completionOutput) {
+      return {
+        status: 'completed',
+        output: result.completionOutput.trimEnd(),
+        command,
+        oracleBinary: resolution.binary,
+        oracleVersion,
+        conversationUrl,
+        providerSessionId,
+        artifacts: [],
+      };
+    }
 
     const ambiguousFailure = Boolean(result.error?.message.startsWith('oracle timed out after'))
       || (result.status !== 0 && log.includes(PROMPT_COMMIT_TIMEOUT));
