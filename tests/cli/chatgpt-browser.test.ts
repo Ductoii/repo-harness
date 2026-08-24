@@ -1040,6 +1040,123 @@ describe('chatgpt browser command', () => {
     });
   }, 30_000);
 
+  test('oracle provider harvests a committed follow-up after ambiguous commit or process timeouts without resending it', () => {
+    withRepo((repoRoot) => {
+      const initial = runChatgpt([
+        'browser-consult',
+        '--repo',
+        repoRoot,
+        '--dry-run',
+        '--prompt',
+        'Start the conversation.',
+      ]);
+      expect(initial.status).toBe(0);
+      const initialPayload = JSON.parse(initial.stdout);
+      const metaPath = join(repoRoot, '.ai/harness/chatgpt/sessions', initialPayload.sessionId, 'meta.json');
+      const meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+      meta.providerSessionId = 'oracle_upstream_timeout_123';
+      writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
+
+      const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-harvest-'));
+      try {
+        const oraclePath = join(binDir, 'oracle');
+        const invocationLog = join(binDir, 'invocations.log');
+        writeFileSync(
+          oraclePath,
+          [
+            '#!/usr/bin/env bun',
+            "import { appendFileSync } from 'fs';",
+            'const args = process.argv.slice(2);',
+            "appendFileSync(process.env.FAKE_ORACLE_INVOCATIONS!, JSON.stringify(args) + '\\n');",
+            "if (args[0] === 'session' && args.includes('--harvest')) {",
+            "  const outputIndex = args.indexOf('--write-output');",
+            "  if (outputIndex >= 0) await Bun.write(args[outputIndex + 1], 'Recovered boundary answer.\\n');",
+            "  console.log('State: completed');",
+            "  console.log(`Last user: ${process.env.FAKE_ORACLE_LAST_USER}`);",
+            "  console.log('---');",
+            "  console.log('Recovered boundary answer.');",
+            '  process.exit(0);',
+            '}',
+            "console.log('Session ID: oracle_followup_timeout_456');",
+            "if (process.env.FAKE_ORACLE_HANG === '1') await new Promise(() => {});",
+            "console.error('ERROR: Prompt did not appear in conversation before timeout (send may have failed)');",
+            'process.exit(1);',
+          ].join('\n') + '\n',
+        );
+        chmodSync(oraclePath, 0o755);
+
+        const prompt = 'Continue with the unique boundary decision.';
+        const recovered = runChatgpt([
+          'browser-followup',
+          '--repo',
+          repoRoot,
+          '--session',
+          initialPayload.sessionId,
+          '--prompt',
+          prompt,
+          '--oracle-bin',
+          oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+          FAKE_ORACLE_LAST_USER: prompt,
+        });
+        expect(recovered.status).toBe(0);
+        const recoveredPayload = JSON.parse(recovered.stdout);
+        expect(recoveredPayload.status).toBe('completed');
+        expect(readFileSync(recoveredPayload.paths.output, 'utf-8')).toBe('Recovered boundary answer.\n');
+        const invocations = readFileSync(invocationLog, 'utf-8').trim().split('\n').map((line) => JSON.parse(line));
+        expect(invocations).toHaveLength(2);
+        expect(invocations[0]).toContain('--followup');
+        expect(invocations[1]).toEqual(expect.arrayContaining(['session', 'oracle_followup_timeout_456', '--harvest', '--write-output']));
+
+        const stale = runChatgpt([
+          'browser-followup',
+          '--repo',
+          repoRoot,
+          '--session',
+          initialPayload.sessionId,
+          '--prompt',
+          'A different follow-up that must not accept an old answer.',
+          '--oracle-bin',
+          oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+          FAKE_ORACLE_LAST_USER: 'An unrelated old prompt.',
+        });
+        expect(stale.status).toBe(0);
+        expect(JSON.parse(stale.stdout).status).toBe('failed');
+
+        const timeoutPrompt = 'Recover this exact process-timeout follow-up.';
+        const timedOut = runChatgpt([
+          'browser-followup',
+          '--repo',
+          repoRoot,
+          '--session',
+          initialPayload.sessionId,
+          '--prompt',
+          timeoutPrompt,
+          '--timeout-ms',
+          '200',
+          '--oracle-bin',
+          oraclePath,
+        ], ROOT, {
+          ...process.env,
+          FAKE_ORACLE_INVOCATIONS: invocationLog,
+          FAKE_ORACLE_LAST_USER: timeoutPrompt,
+          FAKE_ORACLE_HANG: '1',
+        });
+        expect(timedOut.status).toBe(0);
+        const timedOutPayload = JSON.parse(timedOut.stdout);
+        expect(timedOutPayload.status).toBe('completed');
+        expect(readFileSync(timedOutPayload.paths.output, 'utf-8')).toBe('Recovered boundary answer.\n');
+      } finally {
+        rmSync(binDir, { recursive: true, force: true });
+      }
+    });
+  }, 30_000);
+
   test('oracle provider maps thinking to Oracle browser thinking time', () => {
     withRepo((repoRoot) => {
       const binDir = mkdtempSync(join(tmpdir(), 'repo-harness-fake-oracle-thinking-'));

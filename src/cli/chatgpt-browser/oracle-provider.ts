@@ -294,6 +294,47 @@ interface OracleProcessResult {
   error?: Error;
 }
 
+const ORACLE_HARVEST_TIMEOUT_MS = 120_000;
+const PROMPT_COMMIT_TIMEOUT = 'Prompt did not appear in conversation before timeout';
+
+function normalizePromptPreview(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function harvestMatchesPrompt(log: string, prompt: string): boolean {
+  if (!/^State:\s*completed\s*$/im.test(log)) return false;
+  const lastUser = log.match(/^Last user:\s*(.+)$/im)?.[1];
+  if (!lastUser) return false;
+  const actual = normalizePromptPreview(lastUser).replace(/(?:…|\.\.\.)$/, '').trimEnd();
+  const expected = normalizePromptPreview(prompt);
+  return actual === expected || (actual.length >= 32 && expected.startsWith(actual));
+}
+
+async function harvestCommittedAnswer(input: {
+  binary: string;
+  providerSessionId: string;
+  prompt: string;
+  answerPath: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}): Promise<string | undefined> {
+  const harvested = await runOracleProcess(input.binary, [
+    'session',
+    input.providerSessionId,
+    '--harvest',
+    '--write-output',
+    input.answerPath,
+  ], {
+    cwd: input.cwd,
+    env: input.env,
+    timeoutMs: ORACLE_HARVEST_TIMEOUT_MS,
+  });
+  const log = [harvested.stdout, harvested.stderr].filter(Boolean).join('\n');
+  if (harvested.error || harvested.status !== 0 || !harvestMatchesPrompt(log, input.prompt)) return undefined;
+  const answer = existsSync(input.answerPath) ? readFileSync(input.answerPath, 'utf-8') : '';
+  return answer.trim().length > 0 ? answer : undefined;
+}
+
 function runOracleProcess(
   binary: string,
   args: string[],
@@ -312,8 +353,13 @@ function runOracleProcess(
     });
     const timeout = setTimeout(() => {
       timedOut = true;
-      child.kill('SIGTERM');
-      killTimer = setTimeout(() => child.kill('SIGKILL'), 5_000);
+      if (process.platform === 'win32' && child.pid) {
+        const terminated = spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+        if (terminated.error || terminated.status !== 0) child.kill('SIGTERM');
+      } else {
+        child.kill('SIGTERM');
+        killTimer = setTimeout(() => child.kill('SIGKILL'), 5_000);
+      }
     }, opts.timeoutMs);
     const collect = (chunk: Buffer | string, stream: 'stdout' | 'stderr') => {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf-8');
@@ -432,6 +478,31 @@ export async function runOracleProvider(input: BrowserConsultInput, bundle: Prom
     const oracleVersion = detectVersion(`${stdout}\n${stderr}`);
     const conversationUrl = extractConversationUrl(log);
     const providerSessionId = extractProviderSessionId(log);
+
+    const ambiguousFailure = Boolean(result.error?.message.startsWith('oracle timed out after'))
+      || (result.status !== 0 && log.includes(PROMPT_COMMIT_TIMEOUT));
+    if (providerSessionId && ambiguousFailure) {
+      const harvestedAnswer = await harvestCommittedAnswer({
+        binary: resolution.binary,
+        providerSessionId,
+        prompt: providerInput.prompt,
+        answerPath,
+        cwd: runCwd,
+        env: buildOracleEnv(oracleHomeDir),
+      });
+      if (harvestedAnswer) {
+        return {
+          status: 'completed',
+          output: harvestedAnswer.trimEnd(),
+          command,
+          oracleBinary: resolution.binary,
+          oracleVersion,
+          conversationUrl,
+          providerSessionId,
+          artifacts: [],
+        };
+      }
+    }
 
     // Pre/at-start failures are safe to surface as failed; the prompt never landed.
     if (result.error) {
