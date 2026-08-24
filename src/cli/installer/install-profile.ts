@@ -931,12 +931,54 @@ function canonicalEvidence(home: string, relativePaths: readonly string[]): stri
   return existing(canonicalRoots(home).flatMap((root) => relativePaths.map((relative) => join(root, relative))));
 }
 
-function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
+export function pathEndsWithRelative(
+  candidate: string,
+  relative: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const normalize = (value: string) => {
+    const normalized = value.replace(/\\/g, '/').replace(/\/+$/, '');
+    return platform === 'win32' ? normalized.toLowerCase() : normalized;
+  };
+  const normalizedCandidate = normalize(candidate);
+  const normalizedRelative = normalize(relative).replace(/^\/+/, '');
+  return normalizedCandidate === normalizedRelative || normalizedCandidate.endsWith(`/${normalizedRelative}`);
+}
+
+export function executableCandidatePaths(
+  name: string,
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform,
+): string[] {
   const home = env.HOME ?? homedir();
   const bunRoot = env.BUN_INSTALL ?? join(home, '.bun');
-  const candidates = [join(bunRoot, 'bin', name)];
-  for (const directory of (env.PATH ?? '').split(delimiter).filter(Boolean)) candidates.push(join(directory, name));
-  return existing([...new Set(candidates)]);
+  const pathExtensions = platform === 'win32'
+    ? (env.PATHEXT || process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)
+    : [];
+  const extensionKeys = new Set<string>();
+  const extensions = pathExtensions.flatMap((extension) => {
+    const normalized = extension.startsWith('.') ? extension : `.${extension}`;
+    const key = normalized.toLowerCase();
+    if (extensionKeys.has(key)) return [];
+    extensionKeys.add(key);
+    return [normalized];
+  });
+  const suffixes = platform === 'win32' && extensions.some((extension) => name.toLowerCase().endsWith(extension.toLowerCase()))
+    ? ['']
+    : ['', ...extensions];
+  const directories = [join(bunRoot, 'bin'), ...(env.PATH ?? '').split(delimiter).filter(Boolean)];
+  const candidateKeys = new Set<string>();
+  return directories.flatMap((directory) => suffixes.flatMap((suffix) => {
+    const candidate = join(directory, `${name}${suffix}`);
+    const key = platform === 'win32' ? candidate.toLowerCase() : candidate;
+    if (candidateKeys.has(key)) return [];
+    candidateKeys.add(key);
+    return [candidate];
+  }));
+}
+
+function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
+  return existing(executableCandidatePaths(name, env));
 }
 
 function skillEvidence(home: string, names: readonly string[]): string[] {
@@ -1002,11 +1044,11 @@ function probeInstalledComponents(
   const planningCapabilityPaths = probeExpectations.planningCapabilityPaths;
   const planningCapabilities = canonicalEvidence(home, planningCapabilityPaths);
   const planningEvidence = planningSkills.length === planningSkillNames.length
-    && planningCapabilityPaths.every((relative) => planningCapabilities.some((path) => path.endsWith(relative)))
+    && planningCapabilityPaths.every((relative) => planningCapabilities.some((path) => pathEndsWithRelative(path, relative)))
     ? [...planningSkills, ...planningCapabilities]
     : [];
   const fleetEvidence = completeAgentFleetEvidence(home);
-  const verifierEvidence = fleetEvidence.some((path) => /\/gatekeeper\.(?:toml|md)$/.test(path))
+  const verifierEvidence = fleetEvidence.some((path) => pathEndsWithRelative(path, 'gatekeeper.toml') || pathEndsWithRelative(path, 'gatekeeper.md'))
     ? canonicalEvidence(home, ['scripts/contract-run.ts'])
     : [];
   const crossModelEvidence = skillEvidence(home, probeExpectations.crossModel);
@@ -1015,7 +1057,7 @@ function probeInstalledComponents(
   const evidence: Record<InstallComponent, readonly string[]> = {
     'cli': cliEvidence,
     'effective-state': effectiveStateEvidence,
-    'scope-worktree-check-guards': guardPaths.every((relative) => guardEvidence.some((path) => path.endsWith(relative))) ? guardEvidence : [],
+    'scope-worktree-check-guards': guardPaths.every((relative) => guardEvidence.some((path) => pathEndsWithRelative(path, relative))) ? guardEvidence : [],
     'handoff': handoffEvidence,
     'host-adapters': adapterEvidence,
     'adaptive-workflow': adaptiveEvidence,
@@ -1024,7 +1066,7 @@ function probeInstalledComponents(
     'agent-fleet': fleetEvidence,
     'verifier': verifierEvidence,
     'cross-model-acceptance': crossModelEvidence,
-    'release-deployment-gates': releasePaths.every((relative) => releaseEvidence.some((path) => path.endsWith(relative))) ? releaseEvidence : [],
+    'release-deployment-gates': releasePaths.every((relative) => releaseEvidence.some((path) => pathEndsWithRelative(path, relative))) ? releaseEvidence : [],
   };
   return Object.fromEntries(ALL_COMPONENTS.map((component) => [component, {
     status: evidence[component].length > 0 ? 'present' : 'missing',

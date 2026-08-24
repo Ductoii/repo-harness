@@ -1,18 +1,20 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import {
   applyInstallProfile,
   assertInstallProfile,
   beginInstallHostTransaction,
   commitInstallHostTransaction,
+  executableCandidatePaths,
   INSTALL_PROFILES,
   installProfileHostMutationPaths,
   installedProfileStatus,
   planInstallProfile,
+  pathEndsWithRelative,
   PROFILE_COMPONENTS,
   profileEnablesCodegraph,
   prepareLegacyInstallProfileMigration,
@@ -97,6 +99,44 @@ function writeManagedHostSurfaces(
 }
 
 describe('install profiles', () => {
+  const testWindows = process.platform === 'win32' ? test : test.skip;
+
+  testWindows('full profile probes recognize PATHEXT executables and Windows path separators', () => withHome((env) => {
+    writeManagedHostSurfaces(env, 'full');
+    const pathBin = join(env.HOME!, 'path-bin');
+    mkdirSync(pathBin, { recursive: true });
+    renameSync(join(env.BUN_INSTALL!, 'bin', 'repo-harness'), join(env.BUN_INSTALL!, 'bin', 'repo-harness.exe'));
+    renameSync(join(env.BUN_INSTALL!, 'bin', 'codegraph'), join(pathBin, 'codegraph.exe'));
+    env.PATHEXT = '.exe;.cmd';
+    env.PATH = `${pathBin}${delimiter}${env.PATH ?? ''}`;
+
+    const installed = applyInstallProfile('full', env);
+    expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
+  }));
+
+  testWindows('empty PATHEXT falls back and relative suffix matching is boundary-safe', () => withHome((env) => {
+    writeManagedHostSurfaces(env, 'full');
+    for (const name of ['repo-harness', 'codegraph']) {
+      renameSync(join(env.BUN_INSTALL!, 'bin', name), join(env.BUN_INSTALL!, 'bin', `${name}.exe`));
+    }
+    env.PATHEXT = '';
+
+    const installed = applyInstallProfile('full', env);
+    expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
+    expect(pathEndsWithRelative('C:\\Root\\Scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(true);
+    expect(pathEndsWithRelative('C:\\Root\\not-scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(false);
+  }));
+
+  testWindows('Windows executable candidates normalize PATHEXT and preserve names with extensions', () => withHome((env) => {
+    env.PATHEXT = '.EXE;.exe;CMD;.Cmd';
+    env.PATH = `${join(env.HOME!, 'bin')}${delimiter}${join(env.HOME!, 'BIN')}`;
+
+    const extensionless = executableCandidatePaths('codegraph', env, 'win32');
+    expect(extensionless.some((candidate) => candidate.toLowerCase().endsWith('codegraph.exe'))).toBe(true);
+    expect(new Set(extensionless.map((candidate) => candidate.toLowerCase())).size).toBe(extensionless.length);
+    expect(executableCandidatePaths('codegraph.exe', env, 'win32').every((candidate) => !candidate.toLowerCase().endsWith('.exe.exe'))).toBe(true);
+  }));
+
   test('steady-state vocabulary is minimal/full with protocol 2 and exact 8/12 hook projections', () => withHome((env) => {
     expect(INSTALL_PROFILES).toEqual(['minimal', 'full']);
     expect(Object.keys(PROFILE_COMPONENTS)).toEqual(['minimal', 'full']);
