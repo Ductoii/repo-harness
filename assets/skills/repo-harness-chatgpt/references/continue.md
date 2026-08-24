@@ -10,9 +10,15 @@ repo-harness chatgpt browser-followup --repo <repo> --session <sessionId> \
   --model gpt-5.6-sol --thinking extended --prompt "<prompt>"
 ```
 
-Follow-up reopens the conversation using the saved upstream
-`providerSessionId`, not the local `sessionId`; the local id only identifies
-the saved record on disk.
+Follow-up uses the local `sessionId` to resolve the saved upstream
+`providerSessionId` and exact conversation URL. The prompt-bearing Oracle run
+then attaches by exact URL; the provider id remains the recovery/join key.
+
+Any continuation that sends a prompt must use `repo-harness chatgpt browser-followup`.
+It binds and validates the saved conversation, preserves the secret-scan gate,
+and owns the one safe pre-submit retry. A direct `oracle --followup` or direct
+Oracle prompt is not a continuation path. If wrapper read-back is insufficient,
+use read-only `oracle session <providerSessionId> --harvest`; never add a prompt.
 
 Continue in the same conversation. Until Oracle exposes first-class effort
 verification, retain DOM evidence showing `Model GPT-5.6 Sol` and `Effort High`

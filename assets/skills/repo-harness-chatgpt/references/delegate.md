@@ -288,20 +288,16 @@ consult/continue commands -- it does not introduce a new provider path.
   follow-up. If a follow-up reply's speed or depth looks suspicious
   (possible model drift), do not argue about it in the same conversation --
   open a new consult to rebuild verification.
-- `conversationUrl` and Pro model-selection verification: the engine's own
-  `BrowserSessionMeta` can still show `model.verified: false` and
-  `conversationUrl: null` for a session that actually completed correctly --
-  this is a gap in what the engine projects from Oracle's own output, not
-  evidence the run failed (see `tasks/todos.md` for the deferred engine
-  fix). Until that projection is fixed, treat the session meta's
-  `providerSessionId` as the join key and read the transport-native truth
-  directly from `.ai/harness/chatgpt/oracle-home/sessions/<providerSessionId>/meta.json`:
-  `browser.modelSelection` (`verified`, `status`, `source`),
-  `browser.runtime.conversationId`, and `browser.archive.conversationUrl`.
-- Reattach at the Oracle layer directly with `oracle session
-  <providerSessionId>` when this engine's own `browser-followup`/
-  `browser-session` (which key off the local `sessionId`, not the provider
-  session id) are not enough.
+- Pro model-selection verification: the engine can still show
+  `model.verified: false` after a completed Oracle run. Read the
+  transport-native `browser.modelSelection` through the session's
+  `providerSessionId` before claiming verification. Conversation URLs are
+  projected for new sessions; legacy local sessions resolve their exact URL
+  from the saved Oracle provider metadata during `browser-followup`.
+- Every prompt-bearing continuation uses `browser-followup`; never use a direct `oracle --followup`
+  or direct Oracle prompt. When wrapper read-back is not
+  enough, the only direct Oracle operation is read-only `oracle session
+  <providerSessionId> --harvest`; it must not send or retry a prompt.
 - Doctor failure modes, Chrome profile binding, the MCP serve prerequisite,
   and login/2FA handling are governed by `setup.md` and `consult.md` by
   reference; this section does not restate them.
@@ -378,13 +374,11 @@ does not go through the Oracle CLI.
   (see Claude Host Transport) and rerunning `browser-doctor`; do not
   silently switch model strategy, retry against a different model, or fall
   back to native to route around it.
-- Engine session meta reports `model.verified: false` and/or
-  `conversationUrl: null` for a session that otherwise looks complete:
-  treat this as an engine projection gap, not a failed run. Read
-  `browser.modelSelection`, `browser.runtime.conversationId`, and
-  `browser.archive.conversationUrl` from the transport-native meta at
+- Engine session meta reports `model.verified: false` for a session that
+  otherwise looks complete: read `browser.modelSelection` from the
+  transport-native meta at
   `.ai/harness/chatgpt/oracle-home/sessions/<providerSessionId>/meta.json`
-  before concluding anything about model selection or conversation state.
+  before concluding anything about model selection.
 - A `--write-output` file exists but its session did not complete
   successfully: its content may be error text, not a real answer. Check the
   session's status first; only a `completed` session's `--write-output` is
