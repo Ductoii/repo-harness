@@ -34,6 +34,8 @@ import {
 
 const ROOT = join(import.meta.dir, "..");
 
+const ROOT_SKILL_PATH = join(ROOT, "SKILL.md");
+
 interface DiscoveryBaseline {
   pins: Record<string, { sha: string; note?: string }>;
   source_inventory: Array<{ name: string; path: string; kind: string }>;
@@ -129,6 +131,19 @@ describe("skill-routing corpus (evals/skill-routing/routing-corpus.json)", () =>
     const prompts = corpus.cases.map((c) => c.prompt.trim());
     for (const prompt of prompts) expect(prompt.length).toBeGreaterThan(0);
     expect(new Set(prompts).size).toBe(prompts.length);
+  });
+});
+
+describe("configured-host GPT-first route composition", () => {
+  test("non-trivial active work routes through both the harness and ChatGPT packages without a keyword", () => {
+    const rootSkill = readFileSync(ROOT_SKILL_PATH, "utf-8");
+    const prompt = "Implement a non-trivial feature in this active repo-harness task.";
+    const expectedSelectedRoutes = ["repo-harness", "repo-harness-chatgpt"];
+
+    expect(prompt).not.toContain("gptweb");
+    expect(rootSkill).toContain("repo-harness-chatgpt");
+    expect(rootSkill).toContain("A `gptweb` keyword is not required");
+    expect(expectedSelectedRoutes).toEqual(["repo-harness", "repo-harness-chatgpt"]);
   });
 });
 

@@ -147,7 +147,7 @@ describe("repo-harness-chatgpt canonical package: read-back.md is bound to the c
   });
 });
 
-describe("repo-harness-chatgpt canonical package: orchestrate mode is advisory and explicitly enabled", () => {
+describe("repo-harness-chatgpt canonical package: orchestrate mode is advisory and default on after host setup", () => {
   const orchestrate = readFileSync(join(PACKAGE_ROOT, "references", "orchestrate.md"), "utf-8");
   const setup = readFileSync(join(PACKAGE_ROOT, "references", "setup.md"), "utf-8");
   const semanticOrchestrate = normalizeMarkdownWhitespace(orchestrate);
@@ -155,7 +155,9 @@ describe("repo-harness-chatgpt canonical package: orchestrate mode is advisory a
 
   test("orchestrate.md binds remote SHA, local delta, MCP evidence, and same-conversation review", () => {
     for (const marker of [
-      "explicitly enabled",
+      "configured host",
+      "default for every non-trivial repo-harness",
+      "local-only",
       "remote.sha",
       "local.delta",
       "bundle_only",
@@ -198,9 +200,9 @@ describe("repo-harness-chatgpt canonical package: orchestrate mode is advisory a
     }
   });
 
-  test("setup.md provides a bounded explicit orchestration configuration guide", () => {
+  test("setup.md provides bounded one-time host enablement", () => {
     for (const marker of [
-      "Advisory Orchestration Enablement (Explicit Opt-In)",
+      "One-Time Host Enablement",
       "browser-doctor --repo <repo> --provider oracle --json",
       "GitHub Connector",
       "repo-harness mcp doctor --repo <repo> --json",

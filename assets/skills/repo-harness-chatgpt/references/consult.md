@@ -30,7 +30,7 @@ implementation:
    consult only after the prompt bundle and allowed paths are clear.
 4. Start a new consult with a timestamped, non-reused output path so results
    cannot be confused with a prior session:
-   `stamp="$(date -u +%Y%m%dT%H%M%SZ)"; repo-harness chatgpt browser-consult --repo <repo> --provider oracle --model gpt-5.5-pro --heartbeat 59 --prompt "<prompt>" --write-output ".ai/harness/handoff/gptpro/gptpro-${stamp}-<slug>.md"`
+   `stamp="$(date -u +%Y%m%dT%H%M%SZ)"; repo-harness chatgpt browser-consult --repo <repo> --provider oracle --model gpt-5.6-sol --thinking extended --heartbeat 59 --prompt "<prompt>" --write-output ".ai/harness/handoff/gptpro/gptpro-${stamp}-<slug>.md"`
 5. Use browser consult for planning, review, critique, and goal generation
    only; it is never the executor for code edits.
 6. Trust the managed `--write-output` file as the answer authority; provider
@@ -47,6 +47,8 @@ implementation:
    default Chrome/Oracle profile.
 10. For MCP usage from this session, the server must already be running with
     `repo-harness mcp serve --repo . --enable-chatgpt-browser`.
+11. Until Oracle exposes first-class effort verification, retain DOM evidence
+    showing `Model GPT-5.6 Sol` and `Effort High` for the completed turn.
 
 ## Rules
 

@@ -1,10 +1,11 @@
 # Orchestrate Mode: GPT Pro Advisory Chief Planner and Reviewer
 
-Use this mode only after the user has explicitly enabled GPT Pro
-orchestration for the current repository and task and the orchestration lane
-in [`setup.md`](setup.md) has passed. It composes the existing ChatGPT Web
-browser consult, session read-back, and follow-up capabilities. It does not
-add a provider, runtime adapter, schema, fleet role, or second Skill.
+On a configured host, use this mode by default for every non-trivial
+repo-harness feature, bugfix, architecture, optimization, planning, and review
+task after the readiness lane in [`setup.md`](setup.md) passes. A `gptweb`
+keyword is not required. Skip only for explicit local-only or purely mechanical
+work. It composes the existing ChatGPT Web browser consult, read-back, and
+follow-up capabilities; it adds no provider, schema, fleet role, or second Skill.
 
 GPT Pro is an external chief planner/reviewer. Local Codex is the accountable
 coordinator and executor, including the Codex built-in browser (IAB) transport.
@@ -27,7 +28,7 @@ deliverable; this mode receives advice and review only.
 
 ## Readiness Gate
 
-Before opening a real conversation, verify the explicit setup checklist and
+Before opening a real conversation, verify the one-time setup checklist and
 all of the following:
 
 - the canonical Skill is projected from a durable checkout;
@@ -202,8 +203,8 @@ review/notes are the evidence surfaces for this first canary.
 
 ## Failure Handling
 
-Stop without inferred success when any of these occurs: setup is not explicitly
-enabled, Pro model visibility is absent, login or manual verification is
+Stop without inferred success when any of these occurs: host setup or readiness
+is incomplete, Pro model visibility is absent, login or manual verification is
 needed, GitHub Connector selection is unavailable, the remote SHA is stale or
 unverifiable, local content changes after scanning, a secret scan fails, an
 attachment is blocked, generation is incomplete, the conversation handle is
@@ -218,7 +219,7 @@ authority.
 
 ## Existing References
 
-- Setup and explicit enablement: [`setup.md`](setup.md)
+- One-time host setup and readiness: [`setup.md`](setup.md)
 - New consult transport: [`consult.md`](consult.md)
 - Same-session follow-up and raw-evidence handling: [`continue.md`](continue.md)
 - Connector invocation read-back: [`read-back.md`](read-back.md)

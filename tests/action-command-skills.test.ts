@@ -206,6 +206,18 @@ describe("repo-harness action command skills", () => {
     expect(migrate).toContain("ownership=known_generated");
     expect(upgrade).toContain("known_generated");
     expect(upgrade).toContain("Preserve `_ref/`, `_ops/`, secrets, local env, custom hooks");
+    for (const marker of [
+      "fork-managed host",
+      "deploy/runbooks/fork-upstream-update.md",
+      "update/upstream-",
+      "integration PR",
+      "same conversation",
+      "bun run check:ci",
+      "operator approval",
+    ]) {
+      expect(upgrade).toContain(marker);
+    }
+    expect(upgrade).toContain("Do not run the npm-channel `repo-harness update`");
   });
 
   test("setup's capability mode is a targeted registry update instead of full init", () => {
@@ -352,7 +364,12 @@ describe("repo-harness action command skills", () => {
     expect(continueMode).toContain("repo-harness chatgpt browser-open");
     expect(consult).toContain("date -u +%Y%m%dT%H%M%SZ");
     expect(consult).toContain(".ai/harness/handoff/gptpro/gptpro-${stamp}-<slug>.md");
-    expect(consult).toContain("--model gpt-5.5-pro");
+    expect(consult).toContain("--model gpt-5.6-sol");
+    expect(consult).toContain("--thinking extended");
+    expect(consult).not.toContain("--model gpt-5.5-pro");
+    expect(continueMode).toContain("--model gpt-5.6-sol");
+    expect(continueMode).toContain("--thinking extended");
+    expect(continueMode).toContain("Effort High");
     expect(continueMode).toContain("docs/researches/YYYYMMDD-<topic>.md");
     expect(continueMode).toContain("raw artifact path");
     expect(consult).toContain("15");

@@ -7,6 +7,7 @@ root prompt concise; this file owns the detailed routing.
 
 | Work type | Default route | Output |
 |-----------|---------------|--------|
+| Non-trivial repo-harness feature, bugfix, architecture, optimization, planning, or review on a configured host | `repo-harness-chatgpt` orchestrate mode before and after local implementation | GPT Web plan/critique and same-conversation diff review; local Codex retains implementation, checks, and acceptance authority |
 | Product discovery, demand reality, "is this worth building" | Parent agent with `geju` pre-contract framing | Product direction or design doc before engineering planning |
 | Complex engineering plan, architecture lock-in, cross-module refactor | Parent agent with `geju`, then parent-owned P1/P2/P3 | Approved execution plan with architecture, data flow, edge cases, and tests |
 | UI/UX or design-system plan | Parent agent with `geju`, then parent-owned P1/P2/P3 | Design critique and plan fixes before implementation |
@@ -57,7 +58,7 @@ cross-review/merge-gate rows.
 | Generate an upper-layer PRD | `repo-harness-product` (PRD mode) | `$geju` direction pass, Claude-first `claude -p --model opus` drafting, Codex fallback only when needed, PRD in `plans/prds/*.prd.md`; geju thesis/falsifier are pre-contract only and freeze into a delegated contract's `## Why`/`## Falsifier` |
 | Plan and run a program-level sprint | `repo-harness-product` (Sprint mode) | Upper-layer PRD in `plans/prds/`, sprint backlog in `plans/sprints/`; each row expands through `$think` before plan -> contract -> worktree |
 | Prepare a bounded native goal session | `repo-harness-product` (Goal mode) | Codex/Claude `/goal` prompt from detailed PRD or Sprint artifacts; stops to request those documents when missing |
-| Configure ChatGPT Oracle browser/MCP provider | `repo-harness-chatgpt` (setup mode) | Separates `gptpro_browser` local ChatGPT Web browser/session consults from `gptpro_mcp` ChatGPT Connector MCP sidecar setup; preserves auth, tunnel, and API-billing boundaries; explicit setup only, never implied by product planning |
+| Configure ChatGPT Oracle browser/MCP provider | `repo-harness-chatgpt` (setup mode) | One-time explicit host setup; after readiness passes, configured-host task routing is default-on without installing browser credentials implicitly |
 | Consult GPT Pro through browser session | `repo-harness-chatgpt` (consult/continue modes) | Uses `gptpro consult/read/continue/open` wording while mapping to `browser-consult`, `browser-session`, `browser-followup`, and `browser-open` engine commands |
 
 `hooks-init`, `docs-init`, and `create-project-dirs` are not public commands.

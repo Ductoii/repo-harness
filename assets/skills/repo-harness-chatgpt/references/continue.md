@@ -6,12 +6,17 @@ the `repo-harness-gptpro` continue/read/list/open wording.
 ## Continue An Existing Conversation
 
 ```bash
-repo-harness chatgpt browser-followup --repo <repo> --session <sessionId> --prompt "<prompt>"
+repo-harness chatgpt browser-followup --repo <repo> --session <sessionId> \
+  --model gpt-5.6-sol --thinking extended --prompt "<prompt>"
 ```
 
 Follow-up reopens the conversation using the saved upstream
 `providerSessionId`, not the local `sessionId`; the local id only identifies
 the saved record on disk.
+
+Continue in the same conversation. Until Oracle exposes first-class effort
+verification, retain DOM evidence showing `Model GPT-5.6 Sol` and `Effort High`
+for the completed follow-up.
 
 ## Read Results
 

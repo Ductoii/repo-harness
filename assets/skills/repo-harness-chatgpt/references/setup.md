@@ -13,14 +13,14 @@ source.
 - ChatGPT Pro Web access is not OpenAI API quota or an API key substitute;
   never create API keys or billing projects from a ChatGPT Pro subscription.
 
-## Advisory Orchestration Enablement (Explicit Opt-In)
+## One-Time Host Enablement
 
-Use this lane only after the user explicitly enables GPT Pro orchestration for
-the current repository and task. Enablement is task-scoped guidance, not a new
-install profile, managed fleet role, persistent schema, or grant of local
-write/lease/acceptance authority. Do not start an orchestration conversation
-until every prerequisite below is observable; a missing prerequisite returns
-to this guide and stops closed.
+Use this lane once to configure a host for GPT-first orchestration. Successful
+Skill projection and browser readiness make orchestration the default for
+future non-trivial repo-harness tasks; the user need not opt in again per repo,
+task, or prompt. This is not a new install profile, managed fleet role,
+persistent schema, or grant of local write/lease/acceptance authority. A
+missing prerequisite returns to this guide and stops closed.
 
 1. Project the canonical Skill from a durable checkout, if it is not already
    discoverable:
