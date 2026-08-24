@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, s
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { delimiter, join } from 'path';
 import {
   applyInstallProfile,
   assertInstallProfile,
@@ -13,6 +13,7 @@ import {
   installProfileHostMutationPaths,
   installedProfileStatus,
   planInstallProfile,
+  pathEndsWithRelative,
   PROFILE_COMPONENTS,
   profileEnablesCodegraph,
   prepareLegacyInstallProfileMigration,
@@ -101,12 +102,28 @@ describe('install profiles', () => {
 
   testWindows('full profile probes recognize PATHEXT executables and Windows path separators', () => withHome((env) => {
     writeManagedHostSurfaces(env, 'full');
-    for (const name of ['repo-harness', 'codegraph']) {
-      renameSync(join(env.BUN_INSTALL!, 'bin', name), join(env.BUN_INSTALL!, 'bin', `${name}.exe`));
-    }
+    const pathBin = join(env.HOME!, 'path-bin');
+    mkdirSync(pathBin, { recursive: true });
+    renameSync(join(env.BUN_INSTALL!, 'bin', 'repo-harness'), join(env.BUN_INSTALL!, 'bin', 'repo-harness.exe'));
+    renameSync(join(env.BUN_INSTALL!, 'bin', 'codegraph'), join(pathBin, 'codegraph.exe'));
+    env.PATHEXT = '.exe;.cmd';
+    env.PATH = `${pathBin}${delimiter}${env.PATH ?? ''}`;
 
     const installed = applyInstallProfile('full', env);
     expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
+  }));
+
+  testWindows('empty PATHEXT falls back and relative suffix matching is boundary-safe', () => withHome((env) => {
+    writeManagedHostSurfaces(env, 'full');
+    for (const name of ['repo-harness', 'codegraph']) {
+      renameSync(join(env.BUN_INSTALL!, 'bin', name), join(env.BUN_INSTALL!, 'bin', `${name}.exe`));
+    }
+    env.PATHEXT = '';
+
+    const installed = applyInstallProfile('full', env);
+    expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
+    expect(pathEndsWithRelative('C:\\Root\\Scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(true);
+    expect(pathEndsWithRelative('C:\\Root\\not-scripts\\verify-sprint.sh', 'scripts/verify-sprint.sh', 'win32')).toBe(false);
   }));
 
   test('steady-state vocabulary is minimal/full with protocol 2 and exact 8/12 hook projections', () => withHome((env) => {

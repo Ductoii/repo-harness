@@ -338,11 +338,31 @@ function installFleetForClaude(home: string) {
 }
 
 describe("check-agent-tooling", () => {
-  test("Windows command discovery probes PATHEXT executables", () => {
+  const testWindows = process.platform === "win32" ? test : test.skip;
+
+  testWindows("Windows command discovery probes PATHEXT executables", () => {
     const source = readFileSync(SCRIPT, "utf-8");
-    expect(source).toContain('process.platform === "win32"');
-    expect(source).toContain('process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD"');
-    expect(source).toContain('path.join(dir, `${command}${extension}`)');
+    const functionSource = source.match(/function resolvePathCommand\(command\) \{[\s\S]*?\n\}(?=\n\nfunction codeGraphPackageDeclared)/)?.[0];
+    expect(functionSource).toBeDefined();
+    const root = mkdtempSync(join(tmpdir(), "check-agent-tooling-pathext-"));
+    try {
+      const executable = join(root, "codegraph.exe");
+      writeFileSync(executable, "fixture");
+      const resolvePathCommand = new Function(
+        "path",
+        "process",
+        "fileIsExecutable",
+        `${functionSource}; return resolvePathCommand;`,
+      )(
+        { delimiter: ";", join },
+        { platform: "win32", env: { PATH: root, PATHEXT: ".exe;.CMD" } },
+        existsSync,
+      ) as (command: string) => string | null;
+
+      expect(resolvePathCommand("codegraph")).toBe(executable);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("reports active tooling without the retired planning provider", () => {

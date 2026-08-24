@@ -931,17 +931,25 @@ function canonicalEvidence(home: string, relativePaths: readonly string[]): stri
   return existing(canonicalRoots(home).flatMap((root) => relativePaths.map((relative) => join(root, relative))));
 }
 
-function pathEndsWithRelative(candidate: string, relative: string): boolean {
-  const normalizedCandidate = candidate.replace(/\\/g, '/');
-  const normalizedRelative = relative.replace(/\\/g, '/');
-  return normalizedCandidate.endsWith(normalizedRelative);
+export function pathEndsWithRelative(
+  candidate: string,
+  relative: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  const normalize = (value: string) => {
+    const normalized = value.replace(/\\/g, '/').replace(/\/+$/, '');
+    return platform === 'win32' ? normalized.toLowerCase() : normalized;
+  };
+  const normalizedCandidate = normalize(candidate);
+  const normalizedRelative = normalize(relative).replace(/^\/+/, '');
+  return normalizedCandidate === normalizedRelative || normalizedCandidate.endsWith(`/${normalizedRelative}`);
 }
 
 function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
   const home = env.HOME ?? homedir();
   const bunRoot = env.BUN_INSTALL ?? join(home, '.bun');
   const extensions = process.platform === 'win32'
-    ? ['', ...(env.PATHEXT ?? process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)]
+    ? ['', ...(env.PATHEXT || process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)]
     : [''];
   const directories = [join(bunRoot, 'bin'), ...(env.PATH ?? '').split(delimiter).filter(Boolean)];
   const candidates = directories.flatMap((directory) => extensions.map((extension) => join(directory, `${name}${extension}`)));
