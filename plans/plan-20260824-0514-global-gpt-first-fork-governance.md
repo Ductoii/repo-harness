@@ -314,23 +314,23 @@ Stage only manifest-owned outputs changed by canonical sync commands and commit 
 - Consumes: authenticated GitHub CLI, clean verified branch.
 - Produces: operator-owned fork with `origin` pointing to it and `upstream` pointing to Ancienttwo.
 
-- [ ] **Step 1: Install and authenticate GitHub CLI**
+- [x] **Step 1: Install and authenticate GitHub CLI**
 
 Install `gh` through the system package manager. If authentication is absent, open the browser device flow and let the user complete it; never request or print a token.
 
-- [ ] **Step 2: Create or reuse the authenticated user's fork**
+- [x] **Step 2: Create or reuse the authenticated user's fork**
 
 Use `gh repo fork Ancienttwo/repo-harness --clone=false --remote=false`, then resolve the authenticated login via `gh api user --jq .login`.
 
-- [ ] **Step 3: Set remotes safely**
+- [x] **Step 3: Set remotes safely**
 
 Rename the current official remote to `upstream`; add the authenticated fork as `origin`; verify fetch/push URLs before pushing.
 
-- [ ] **Step 4: Push the feature branch and open a PR to fork main**
+- [x] **Step 4: Push the feature branch and open a PR to fork main**
 
 Push `codex/global-gpt-first` to the fork and open an integration PR targeting the fork's `main`. Do not open a PR against Ancienttwo unless the user separately requests upstream contribution.
 
-- [ ] **Step 5: Stop for operator merge approval**
+- [x] **Step 5: Stop for operator merge approval**
 
 Report the PR URL, exact head SHA, checks, canary status, and rollback target. Do not merge the PR without explicit approval.
 
@@ -390,11 +390,11 @@ Record only non-secret commit identities in the operator runtime state; never st
 - [x] **Step 3: Run CI-equivalent gate**
 - [x] **Step 4: Run clean install/adoption smoke**
 - [x] **Step 5: Commit required projections**
-- [ ] **Step 1: Install and authenticate GitHub CLI**
-- [ ] **Step 2: Create or reuse the authenticated user's fork**
-- [ ] **Step 3: Set remotes safely**
-- [ ] **Step 4: Push the feature branch and open a PR to fork main**
-- [ ] **Step 5: Stop for operator merge approval**
+- [x] **Step 1: Install and authenticate GitHub CLI**
+- [x] **Step 2: Create or reuse the authenticated user's fork**
+- [x] **Step 3: Set remotes safely**
+- [x] **Step 4: Push the feature branch and open a PR to fork main**
+- [x] **Step 5: Stop for operator merge approval**
 - [ ] **Step 1: Project from the durable checkout**
 - [ ] **Step 2: Run global doctors**
 - [ ] **Step 3: Run dry-run Sol/High projection**

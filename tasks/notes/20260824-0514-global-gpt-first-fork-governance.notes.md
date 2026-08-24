@@ -4,7 +4,7 @@
 > **Plan**: plans/plan-20260824-0514-global-gpt-first-fork-governance.md
 > **Contract**: tasks/contracts/20260824-0514-global-gpt-first-fork-governance.contract.md
 > **Review**: tasks/reviews/20260824-0514-global-gpt-first-fork-governance.review.md
-> **Last Updated**: 2026-08-24 06:53
+> **Last Updated**: 2026-08-24 07:02
 > **Lifecycle**: notes
 
 ## Design Decisions
@@ -39,6 +39,9 @@
 - Oracle dry-run secret scan: Gitleaks 8.30.1 passed over the exact 81,824-byte prompt bundle.
 - Oracle review session: `chgpt_20260824_064911_global-gpt-first-fork-governance-review` — exact diff SHA-256 `ca1074a4c022ec3cd00b65b77f99bad1766d6a65bf17e3d8b4a907bc79707301`, verified GPT-5.6 Sol, UI Effort High, verdict PASS.
 - Same-conversation follow-up: `chgpt_20260824_065042_global-gpt-first-fork-governance-final-verdict` — governance boundary re-check, verdict PASS.
+- GitHub fork: `https://github.com/Ductoii/repo-harness`; `origin` points to the fork and `upstream` points to Ancienttwo.
+- Publication: branch `codex/global-gpt-first-fork-governance`, PR `https://github.com/Ductoii/repo-harness/pull/1` targeting fork `main`.
+- Approval boundary: PR is open and unmerged; global projection remains intentionally pending.
 
 ## Promotion Filter
 

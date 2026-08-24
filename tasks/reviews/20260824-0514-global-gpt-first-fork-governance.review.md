@@ -5,7 +5,7 @@
 > **Contract**: tasks/contracts/20260824-0514-global-gpt-first-fork-governance.contract.md
 > **Notes File**: tasks/notes/20260824-0514-global-gpt-first-fork-governance.notes.md
 > **Checks File**: .ai/harness/checks/latest.json
-> **Last Updated**: 2026-08-24 06:53
+> **Last Updated**: 2026-08-24 07:02
 > **Recommendation**: pass
 > **Review Rubric Version**: 2
 > **Reviewed Subject SHA256**: ca1074a4c022ec3cd00b65b77f99bad1766d6a65bf17e3d8b4a907bc79707301
@@ -20,7 +20,7 @@
 - Actual files changed: 21 paths within the contract allowlist; 1,257 insertions and 43 deletions at reviewed subject.
 - Commands passed: focused tests; strict workflow checks; full `bun run check:ci`; real Oracle exact-diff review and same-conversation follow-up.
 - Residual risks: global installation is intentionally deferred until the fork PR is merged with explicit operator approval.
-- Reviewer action required: approve or reject the fork PR merge after publication.
+- Reviewer action required: approve or reject merge of `https://github.com/Ductoii/repo-harness/pull/1`.
 - Rollback: restore upstream base `75f50b90` or the last accepted fork SHA and re-project from the durable checkout.
 
 ## Mode Evidence
