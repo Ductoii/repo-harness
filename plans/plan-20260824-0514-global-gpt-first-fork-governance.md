@@ -350,7 +350,7 @@ Reproduce the Git Bash symlink failure against the accepted fork and retain a no
 
 - [x] **Step 2: Pin global shell resolution and add native junction projection**
 
-Bind post-preflight shell commands to the verified Git-for-Windows Bash and use a fail-closed Bun directory-junction helper on Windows.
+Bind shell commands to the verified Git-for-Windows Bash, use a fail-closed Bun directory-junction helper, and make profile/tooling discovery recognize Windows separators plus PATHEXT executables.
 
 - [ ] **Step 3: Verify and merge the Windows installer repair**
 

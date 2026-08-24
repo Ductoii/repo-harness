@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { createHash } from 'crypto';
 import { tmpdir } from 'os';
@@ -97,6 +97,18 @@ function writeManagedHostSurfaces(
 }
 
 describe('install profiles', () => {
+  const testWindows = process.platform === 'win32' ? test : test.skip;
+
+  testWindows('full profile probes recognize PATHEXT executables and Windows path separators', () => withHome((env) => {
+    writeManagedHostSurfaces(env, 'full');
+    for (const name of ['repo-harness', 'codegraph']) {
+      renameSync(join(env.BUN_INSTALL!, 'bin', name), join(env.BUN_INSTALL!, 'bin', `${name}.exe`));
+    }
+
+    const installed = applyInstallProfile('full', env);
+    expect(installedProfileStatus(installed.state, env).drift.status).toBe('consistent');
+  }));
+
   test('steady-state vocabulary is minimal/full with protocol 2 and exact 8/12 hook projections', () => withHome((env) => {
     expect(INSTALL_PROFILES).toEqual(['minimal', 'full']);
     expect(Object.keys(PROFILE_COMPONENTS)).toEqual(['minimal', 'full']);

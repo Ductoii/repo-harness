@@ -1492,10 +1492,15 @@ function parseCodeGraphProjectStatus(output) {
 
 function resolvePathCommand(command) {
   const pathValue = process.env.PATH || "";
+  const extensions = process.platform === "win32"
+    ? ["", ...(process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)]
+    : [""];
   for (const dir of pathValue.split(path.delimiter)) {
     if (!dir) continue;
-    const candidate = path.join(dir, command);
-    if (fileIsExecutable(candidate)) return candidate;
+    for (const extension of extensions) {
+      const candidate = path.join(dir, `${command}${extension}`);
+      if (fileIsExecutable(candidate)) return candidate;
+    }
   }
   return null;
 }

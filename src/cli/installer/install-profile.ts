@@ -931,11 +931,20 @@ function canonicalEvidence(home: string, relativePaths: readonly string[]): stri
   return existing(canonicalRoots(home).flatMap((root) => relativePaths.map((relative) => join(root, relative))));
 }
 
+function pathEndsWithRelative(candidate: string, relative: string): boolean {
+  const normalizedCandidate = candidate.replace(/\\/g, '/');
+  const normalizedRelative = relative.replace(/\\/g, '/');
+  return normalizedCandidate.endsWith(normalizedRelative);
+}
+
 function executableEvidence(name: string, env: NodeJS.ProcessEnv): string[] {
   const home = env.HOME ?? homedir();
   const bunRoot = env.BUN_INSTALL ?? join(home, '.bun');
-  const candidates = [join(bunRoot, 'bin', name)];
-  for (const directory of (env.PATH ?? '').split(delimiter).filter(Boolean)) candidates.push(join(directory, name));
+  const extensions = process.platform === 'win32'
+    ? ['', ...(env.PATHEXT ?? process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean)]
+    : [''];
+  const directories = [join(bunRoot, 'bin'), ...(env.PATH ?? '').split(delimiter).filter(Boolean)];
+  const candidates = directories.flatMap((directory) => extensions.map((extension) => join(directory, `${name}${extension}`)));
   return existing([...new Set(candidates)]);
 }
 
@@ -1002,11 +1011,11 @@ function probeInstalledComponents(
   const planningCapabilityPaths = probeExpectations.planningCapabilityPaths;
   const planningCapabilities = canonicalEvidence(home, planningCapabilityPaths);
   const planningEvidence = planningSkills.length === planningSkillNames.length
-    && planningCapabilityPaths.every((relative) => planningCapabilities.some((path) => path.endsWith(relative)))
+    && planningCapabilityPaths.every((relative) => planningCapabilities.some((path) => pathEndsWithRelative(path, relative)))
     ? [...planningSkills, ...planningCapabilities]
     : [];
   const fleetEvidence = completeAgentFleetEvidence(home);
-  const verifierEvidence = fleetEvidence.some((path) => /\/gatekeeper\.(?:toml|md)$/.test(path))
+  const verifierEvidence = fleetEvidence.some((path) => pathEndsWithRelative(path, 'gatekeeper.toml') || pathEndsWithRelative(path, 'gatekeeper.md'))
     ? canonicalEvidence(home, ['scripts/contract-run.ts'])
     : [];
   const crossModelEvidence = skillEvidence(home, probeExpectations.crossModel);
@@ -1015,7 +1024,7 @@ function probeInstalledComponents(
   const evidence: Record<InstallComponent, readonly string[]> = {
     'cli': cliEvidence,
     'effective-state': effectiveStateEvidence,
-    'scope-worktree-check-guards': guardPaths.every((relative) => guardEvidence.some((path) => path.endsWith(relative))) ? guardEvidence : [],
+    'scope-worktree-check-guards': guardPaths.every((relative) => guardEvidence.some((path) => pathEndsWithRelative(path, relative))) ? guardEvidence : [],
     'handoff': handoffEvidence,
     'host-adapters': adapterEvidence,
     'adaptive-workflow': adaptiveEvidence,
@@ -1024,7 +1033,7 @@ function probeInstalledComponents(
     'agent-fleet': fleetEvidence,
     'verifier': verifierEvidence,
     'cross-model-acceptance': crossModelEvidence,
-    'release-deployment-gates': releasePaths.every((relative) => releaseEvidence.some((path) => path.endsWith(relative))) ? releaseEvidence : [],
+    'release-deployment-gates': releasePaths.every((relative) => releaseEvidence.some((path) => pathEndsWithRelative(path, relative))) ? releaseEvidence : [],
   };
   return Object.fromEntries(ALL_COMPONENTS.map((component) => [component, {
     status: evidence[component].length > 0 ? 'present' : 'missing',

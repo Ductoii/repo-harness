@@ -338,6 +338,13 @@ function installFleetForClaude(home: string) {
 }
 
 describe("check-agent-tooling", () => {
+  test("Windows command discovery probes PATHEXT executables", () => {
+    const source = readFileSync(SCRIPT, "utf-8");
+    expect(source).toContain('process.platform === "win32"');
+    expect(source).toContain('process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD"');
+    expect(source).toContain('path.join(dir, `${command}${extension}`)');
+  });
+
   test("reports active tooling without the retired planning provider", () => {
     const envRoot = setupFakeEnvironment("check-agent-tooling");
     try {

@@ -49,7 +49,7 @@ test suite and an Oracle dry-run before any real conversation.
 
 ## Root Cause Evidence
 
-- root_cause: `src/cli/commands/global-runtime.ts` and `src/cli/runtime/helper-runner.ts` launched non-protected shell commands through bare `bash`, which resolves the WSL launcher on Windows, while `scripts/sync-codex-installed-copies.sh` only supported POSIX symlinks or rsync copies and therefore had no native Windows projection path.
+- root_cause: Windows projection combined Unix-only assumptions: bare `bash` resolution in `src/cli/commands/global-runtime.ts` and `src/cli/runtime/helper-runner.ts`, POSIX-only link/copy modes in `scripts/sync-codex-installed-copies.sh`, and forward-slash/extensionless executable probes in `src/cli/installer/install-profile.ts` plus `scripts/check-agent-tooling.sh`.
 - repro: `bun test tests/cli/windows-installed-copy-junction.test.ts --timeout 60000`
 - regression_guard: `tests/cli/windows-installed-copy-junction.test.ts`
 - pre_fix_failure_artifact: `tasks/evidence/20260824-windows-junction-install-pre-fix.log`
@@ -160,6 +160,8 @@ exit_criteria:
     - path: tests/cli/chatgpt-browser.test.ts
     - path: tests/cli/windows-installed-copy-junction.test.ts
     - path: tests/cli/windows-protected-helper-runtime-smoke.test.ts
+    - path: tests/check-agent-tooling.test.ts
+    - path: tests/install-profiles.test.ts
     - path: tests/unit/windows-directory-junction.test.ts
     - path: tests/unit/windows-protected-helper-platform-contract.test.ts
   commands_succeed:
